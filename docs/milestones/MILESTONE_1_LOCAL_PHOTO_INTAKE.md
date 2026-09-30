@@ -236,19 +236,20 @@ If the user opens the folder picker and clicks Cancel:
 
 Feature 1 is complete only when all of these are true:
 
-- [ ] `Select Folder` opens the native operating-system folder picker.
-- [ ] Only folders can be selected.
-- [ ] Selecting a folder returns its path to React.
-- [ ] The selected folder path is visible in the UI.
-- [ ] Canceling the picker causes no error.
-- [ ] The renderer does not directly import Node.js `fs`, `path`, or Electron main-process APIs.
-- [ ] Folder selection goes through the preload bridge.
-- [ ] The preload API is TypeScript-typed.
-- [ ] The application still passes the normal project build/type checks.
+- [x] `Select Folder` opens the native operating-system folder picker.
+- [x] Only folders can be selected.
+- [x] Selecting a folder returns its path to React.
+- [x] The selected folder path is visible in the UI.
+- [x] Canceling the picker causes no error.
+- [x] The renderer does not directly import Node.js `fs`, `path`, or Electron main-process APIs.
+- [x] Folder selection goes through the preload bridge.
+- [x] The preload API is TypeScript-typed.
+- [x] The application still passes the normal project build/type checks.
 
 ## Feature 1 Manual Tests
 
 ### Test F1.1 — Successful selection
+**Status:** Passed
 
 1. Launch Similens.
 2. Click `Select Folder`.
@@ -262,6 +263,7 @@ Expected:
 - no console/runtime error occurs.
 
 ### Test F1.2 — Cancel
+**Status:** Passed
 
 1. Click `Select Folder`.
 2. Click Cancel.
@@ -273,6 +275,7 @@ Expected:
 - no invalid path is displayed.
 
 ### Test F1.3 — Select another folder
+**Status:** Passed
 
 1. Select Folder A.
 2. Select Folder B.

@@ -491,74 +491,74 @@ This is preferable to simply saying:
 
 ## Phase 0 — Planning
 
-- [x] Define the problem.
-- [x] Choose the project name: **Similens**.
-- [x] Define MVP scope.
-- [x] Choose Electron + React + TypeScript.
-- [x] Choose local AI inference.
-- [x] Select DINOv2-small as the first model candidate.
-- [x] Define CLIP and pHash as comparison baselines.
-- [x] Define cross-platform architecture.
-- [x] Create the repository.
-- [x] Scaffold the application.
+- Define the problem.
+- Choose the project name: **Similens**.
+- Define MVP scope.
+- Choose Electron + React + TypeScript.
+- Choose local AI inference.
+- Select DINOv2-small as the first model candidate.
+- Define CLIP and pHash as comparison baselines.
+- Define cross-platform architecture.
+- Create the repository.
+- Scaffold the application.
 
 ## Phase 1 — Technical Prototype
 
-- [ ] Select a local folder.
-- [ ] Discover supported image files.
-- [ ] Load a local vision model.
-- [ ] Generate one embedding per image.
-- [ ] Calculate pairwise similarity.
-- [ ] Print similarity results for a small test dataset.
-- [ ] Evaluate DINOv2-small against baselines.
+- Select a local folder.
+- Discover supported image files.
+- Load a local vision model.
+- Generate one embedding per image.
+- Calculate pairwise similarity.
+- Print similarity results for a small test dataset.
+- Evaluate DINOv2-small against baselines.
 
 ## Phase 2 — Similarity Engine
 
-- [ ] Implement grouping/clustering.
-- [ ] Tune similarity thresholds.
-- [ ] Handle false-positive groups.
-- [ ] Add embedding caching.
-- [ ] Add scan progress reporting.
+- Implement grouping/clustering.
+- Tune similarity thresholds.
+- Handle false-positive groups.
+- Add embedding caching.
+- Add scan progress reporting.
 
 ## Phase 3 — MVP Interface
 
-- [ ] Build the group review screen.
-- [ ] Add image previews.
-- [ ] Add multi-selection.
-- [ ] Add photo details.
-- [ ] Add "Reveal in Finder / Explorer".
-- [ ] Add "Move to Trash / Recycle Bin".
-- [ ] Add similarity sensitivity control.
-- [ ] Add scan summary.
+- Build the group review screen.
+- Add image previews.
+- Add multi-selection.
+- Add photo details.
+- Add "Reveal in Finder / Explorer".
+- Add "Move to Trash / Recycle Bin".
+- Add similarity sensitivity control.
+- Add scan summary.
 
 ## Phase 4 — Cross-Platform Validation
 
-- [ ] macOS testing.
-- [ ] Windows testing.
-- [ ] Linux testing.
-- [ ] Platform-specific file-operation validation.
-- [ ] Packaging.
+- macOS testing.
+- Windows testing.
+- Linux testing.
+- Platform-specific file-operation validation.
+- Packaging.
 
 ## Phase 5 — Quality Intelligence
 
-- [ ] Sharpness analysis.
-- [ ] Blur analysis.
-- [ ] Exposure analysis.
-- [ ] Face-quality analysis.
-- [ ] Eye-state analysis.
-- [ ] Explainable quality scores.
-- [ ] Side-by-side quality comparison.
+- Sharpness analysis.
+- Blur analysis.
+- Exposure analysis.
+- Face-quality analysis.
+- Eye-state analysis.
+- Explainable quality scores.
+- Side-by-side quality comparison.
 
 ## Phase 6 — Future Ideas
 
-- [ ] Faster similarity search for very large libraries.
-- [ ] Incremental folder rescanning.
-- [ ] More model benchmarks.
-- [ ] Model quantization.
-- [ ] GPU acceleration where practical.
-- [ ] Configurable image formats.
-- [ ] Session history.
-- [ ] Undo-friendly cleanup workflow.
+- Faster similarity search for very large libraries.
+- Incremental folder rescanning.
+- More model benchmarks.
+- Model quantization.
+- GPU acceleration where practical.
+- Configurable image formats.
+- Session history.
+- Undo-friendly cleanup workflow.
 
 ---
 
