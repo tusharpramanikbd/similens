@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, dialog, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { scanPhotoFolder } from '@main/services/photoScanner'
 
 function createWindow(): void {
   // Create the browser window.
@@ -60,6 +61,10 @@ app.whenReady().then(() => {
     }
 
     return result.filePaths[0]
+  })
+
+  ipcMain.handle('photos:scan-folder', async (_, folderPath: string) => {
+    return scanPhotoFolder(folderPath)
   })
 
   createWindow()
