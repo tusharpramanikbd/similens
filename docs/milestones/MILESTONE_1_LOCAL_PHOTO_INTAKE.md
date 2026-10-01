@@ -395,17 +395,17 @@ The UI should not start scanning when no folder has been selected.
 
 ## Feature 2 Acceptance Criteria
 
-- [ ] A selected folder can be scanned.
-- [ ] `.jpg`, `.jpeg`, `.png`, and `.heic` files are detected.
-- [ ] Uppercase variants such as `.JPG` and `.PNG` are detected.
-- [ ] Unsupported files are ignored.
-- [ ] Nested folders are scanned recursively.
-- [ ] The result contains the correct number of supported photos.
-- [ ] The result contains the discovered photo paths.
-- [ ] Scanning occurs outside the React renderer.
-- [ ] The renderer does not directly access Node.js `fs`.
-- [ ] File-scanning logic is separated from UI logic.
-- [ ] Project typecheck/build still passes.
+- [x] A selected folder can be scanned.
+- [x] `.jpg`, `.jpeg`, `.png`, and `.heic` files are detected.
+- [x] Uppercase variants such as `.JPG` and `.PNG` are detected.
+- [x] Unsupported files are ignored.
+- [x] Nested folders are scanned recursively.
+- [x] The result contains the correct number of supported photos.
+- [x] The result contains the discovered photo paths.
+- [x] Scanning occurs outside the React renderer.
+- [x] The renderer does not directly access Node.js `fs`.
+- [x] File-scanning logic is separated from UI logic.
+- [x] Project typecheck/build still passes.
 
 ## Feature 2 Manual Tests
 
@@ -430,6 +430,7 @@ Supported photos found: 4
 ```
 
 ### Test F2.1 — Mixed file types
+**Status:** Passed
 
 Expected:
 
@@ -437,12 +438,14 @@ Expected:
 - PDF, MP4, and TXT ignored.
 
 ### Test F2.2 — Nested folder
+**Status:** Passed
 
 Expected:
 
 - images inside `nested/` are included.
 
 ### Test F2.3 — Empty folder
+**Status:** Passed
 
 Expected:
 
@@ -453,6 +456,7 @@ Expected:
 No error should occur.
 
 ### Test F2.4 — Uppercase extension
+**Status:** Passed
 
 Expected:
 

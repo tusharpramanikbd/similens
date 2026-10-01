@@ -1,4 +1,4 @@
-import { readdir } from 'fs/promises'
+import { readdir, stat } from 'fs/promises'
 import { extname, join } from 'path'
 import type { PhotoScanResult } from '@shared/types/photo'
 
@@ -32,6 +32,16 @@ function isSupportedImage(filePath: string): boolean {
 }
 
 export async function scanPhotoFolder(folderPath: string): Promise<PhotoScanResult> {
+  if (!folderPath.trim()) {
+    throw new Error('Folder path is required')
+  }
+
+  const folderStats = await stat(folderPath)
+
+  if (!folderStats.isDirectory()) {
+    throw new Error('Folder path must point to a directory')
+  }
+
   const files = await getFilesRecursively(folderPath)
 
   const photos = files.filter(isSupportedImage)
