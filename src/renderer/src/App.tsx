@@ -6,6 +6,7 @@ function App(): React.JSX.Element {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle')
   const [scanResult, setScanResult] = useState<PhotoScanResult | null>(null)
+  const [scanError, setScanError] = useState<string | null>(null)
 
   const handleSelectFolder = async (): Promise<void> => {
     const folderPath = await window.similens.selectFolder()
@@ -23,10 +24,17 @@ function App(): React.JSX.Element {
     }
 
     setScanStatus('scanning')
+    setScanError(null)
 
-    const result = await window.similens.scanFolder(selectedFolder)
+    const response = await window.similens.scanFolder(selectedFolder)
 
-    setScanResult(result)
+    if (!response.success) {
+      setScanStatus('error')
+      setScanError(response.error)
+      return
+    }
+
+    setScanResult(response.result)
     setScanStatus('success')
   }
 
@@ -58,6 +66,8 @@ function App(): React.JSX.Element {
           )}
         </div>
       )}
+
+      {scanStatus === 'error' && scanError && <p>{scanError}</p>}
     </main>
   )
 }

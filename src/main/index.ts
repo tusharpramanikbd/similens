@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { scanPhotoFolder } from '@main/services/photoScanner'
+import type { PhotoScanResponse } from '@shared/types/photo'
 
 function createWindow(): void {
   // Create the browser window.
@@ -63,9 +64,26 @@ app.whenReady().then(() => {
     return result.filePaths[0]
   })
 
-  ipcMain.handle('photos:scan-folder', async (_, folderPath: string) => {
-    return scanPhotoFolder(folderPath)
-  })
+  ipcMain.handle(
+    'photos:scan-folder',
+    async (_, folderPath: string): Promise<PhotoScanResponse> => {
+      try {
+        const result = await scanPhotoFolder(folderPath)
+
+        return {
+          success: true,
+          result
+        }
+      } catch (error) {
+        console.error('Failed to scan folder:', error)
+
+        return {
+          success: false,
+          error: 'Unable to scan this folder.'
+        }
+      }
+    }
+  )
 
   createWindow()
 
