@@ -564,20 +564,21 @@ Old result state must not be confused with the new folder.
 
 ## Feature 3 Acceptance Criteria
 
-- [ ] Folder selection and scan initiation are clearly separated.
-- [ ] Scan cannot start without a selected folder.
-- [ ] UI visibly enters a scanning state.
-- [ ] Duplicate scan requests are prevented while a scan is running.
-- [ ] Successful scan displays selected folder.
-- [ ] Successful scan displays photo count.
-- [ ] Zero-photo folders display a valid empty result, not an error.
-- [ ] Selecting a new folder does not leave misleading old results.
-- [ ] Rescanning works.
-- [ ] App remains responsive during normal small/medium test scans.
+- [x] Folder selection and scan initiation are clearly separated.
+- [x] Scan cannot start without a selected folder.
+- [x] UI visibly enters a scanning state.
+- [x] Duplicate scan requests are prevented while a scan is running.
+- [x] Successful scan displays selected folder.
+- [x] Successful scan displays photo count.
+- [x] Zero-photo folders display a valid empty result, not an error.
+- [x] Selecting a new folder does not leave misleading old results.
+- [x] Rescanning works.
+- [x] App remains responsive during normal small/medium test scans.
 
 ## Feature 3 Manual Tests
 
 ### Test F3.1 — Initial state
+**Status:** Passed
 
 Expected:
 
@@ -585,6 +586,7 @@ Expected:
 - scan action unavailable until folder selection.
 
 ### Test F3.2 — Normal scan
+**Status:** Passed
 
 Expected:
 
@@ -599,12 +601,14 @@ Photos found: N
 ```
 
 ### Test F3.3 — Empty folder
+**Status:** Passed
 
 Expected:
 
 clear zero-photo message.
 
 ### Test F3.4 — Folder change
+**Status:** Passed
 
 Scan Folder A, then choose Folder B.
 
@@ -613,6 +617,7 @@ Expected:
 Folder A result is cleared or clearly replaced before Folder B result is presented.
 
 ### Test F3.5 — Repeated scan click
+**Status:** Passed
 
 Try clicking Scan repeatedly.
 
