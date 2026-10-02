@@ -697,13 +697,13 @@ Before declaring Milestone 1 complete, confirm:
 
 ## Feature 4 Acceptance Criteria
 
-- [ ] Scan failures do not crash the application.
-- [ ] User receives a readable error state.
-- [ ] App can recover from an error without restart.
-- [ ] No unrestricted Node.js access is exposed to the renderer.
-- [ ] No generic unrestricted IPC bridge is exposed.
-- [ ] Build/type validation passes.
-- [ ] Full Milestone 1 manual test suite passes.
+- [x] Scan failures do not crash the application.
+- [x] User receives a readable error state.
+- [x] App can recover from an error without restart.
+- [x] No unrestricted Node.js access is exposed to the renderer.
+- [x] No generic unrestricted IPC bridge is exposed.
+- [x] Build/type validation passes.
+- [x] Full Milestone 1 manual test suite passes.
 
 ---
 
@@ -770,42 +770,42 @@ Milestone 1 is complete only when **all** of the following are true:
 
 ## Functionality
 
-- [ ] User can select a local folder.
-- [ ] Folder path is displayed.
-- [ ] User can start a photo scan.
-- [ ] Scan includes nested directories.
-- [ ] JPG/JPEG/PNG/HEIC files are discovered.
-- [ ] Unsupported file types are ignored.
-- [ ] Result displays the correct photo count.
-- [ ] Empty folders are handled correctly.
-- [ ] Folder selection can be changed.
-- [ ] Folder can be rescanned.
-- [ ] Cancellation is handled safely.
-- [ ] Scan errors are handled safely.
+- [x] User can select a local folder.
+- [x] Folder path is displayed.
+- [x] User can start a photo scan.
+- [x] Scan includes nested directories.
+- [x] JPG/JPEG/PNG/HEIC files are discovered.
+- [x] Unsupported file types are ignored.
+- [x] Result displays the correct photo count.
+- [x] Empty folders are handled correctly.
+- [x] Folder selection can be changed.
+- [x] Folder can be rescanned.
+- [x] Cancellation is handled safely.
+- [x] Scan errors are handled safely.
 
 ## Architecture
 
-- [ ] Renderer does not directly use Node.js filesystem APIs.
-- [ ] Renderer communicates through a typed preload API.
-- [ ] IPC endpoints are feature-specific.
-- [ ] Native dialog logic stays in the Electron main process.
-- [ ] File scanning stays outside the renderer.
-- [ ] File-scanning logic is reasonably separated from IPC wiring.
+- [x] Renderer does not directly use Node.js filesystem APIs.
+- [x] Renderer communicates through a typed preload API.
+- [x] IPC endpoints are feature-specific.
+- [x] Native dialog logic stays in the Electron main process.
+- [x] File scanning stays outside the renderer.
+- [x] File-scanning logic is reasonably separated from IPC wiring.
 
 ## Quality
 
-- [ ] TypeScript checks pass.
-- [ ] Production build passes.
-- [ ] No known runtime errors during milestone test flow.
-- [ ] No accidental debug/demo code remains.
-- [ ] Manual milestone test suite passes.
+- [x] TypeScript checks pass.
+- [x] Production build passes.
+- [x] No known runtime errors during milestone test flow.
+- [x] No accidental debug/demo code remains.
+- [x] Manual milestone test suite passes.
 
 ## Scope Discipline
 
-- [ ] No AI model has been integrated.
-- [ ] No similarity logic has been implemented.
-- [ ] No photo deletion has been implemented.
-- [ ] No unnecessary future functionality has been added.
+- [x] No AI model has been integrated.
+- [x] No similarity logic has been implemented.
+- [x] No photo deletion has been implemented.
+- [x] No unnecessary future functionality has been added.
 
 ---
 
