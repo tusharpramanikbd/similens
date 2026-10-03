@@ -272,13 +272,13 @@ Personal photos should stay local and be ignored by Git.
 
 ## Feature 1 Acceptance Criteria
 
-- [ ] A local evaluation dataset exists.
-- [ ] It contains multiple positive near-duplicate groups.
-- [ ] It contains hard-negative examples.
-- [ ] It contains clearly unrelated examples.
-- [ ] Ground-truth groups are documented.
-- [ ] Personal evaluation images are not accidentally committed to Git.
-- [ ] The dataset is large enough to compare at least two similarity approaches meaningfully.
+- [x] A local evaluation dataset exists.
+- [x] It contains multiple positive near-duplicate groups.
+- [x] It contains hard-negative examples.
+- [x] It contains clearly unrelated examples.
+- [x] Ground-truth groups are documented.
+- [x] Personal evaluation images are not accidentally committed to Git.
+- [x] The dataset is large enough to compare at least two similarity approaches meaningfully.
 
 ## Feature 1 Validation
 
