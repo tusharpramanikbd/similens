@@ -359,14 +359,50 @@ Struggles with:
 
 Actual conclusions must come from experiments.
 
+## Baseline Evaluation Results
+
+Evaluation dataset:
+
+- Positive near-duplicate pairs: 30
+- Hard-negative pairs: 45
+- Unrelated pairs: 45
+
+Measured pHash Hamming distances:
+
+| Category | Pairs | Min | Max | Average |
+| --- | ---: | ---: | ---: | ---: |
+| Positive | 30 | 4 | 38 | 16.9 |
+| Hard negatives | 45 | 16 | 44 | 29.7 |
+| Unrelated | 45 | 22 | 38 | 30.5 |
+
+### Initial Findings
+
+The pHash baseline generally assigns lower Hamming distances to positive
+near-duplicate photos than to negative examples.
+
+However, the ranges overlap significantly.
+
+In particular, `group-03` contains genuine positive pairs with distances as
+high as 38. Some hard-negative pairs have distances as low as 16.
+
+This means a single pHash threshold cannot perfectly separate all positive and
+negative examples in the current evaluation dataset.
+
+The baseline appears strong for very similar burst-style photos, but becomes
+less reliable when framing, camera position, or scene composition changes more
+substantially.
+
+These results will be used as the reference baseline when evaluating the
+embedding-based AI approach later in Milestone 2.
+
 ## Feature 2 Acceptance Criteria
 
-- [ ] A working local perceptual-hash baseline exists.
-- [ ] It can compare two photos.
-- [ ] It has been tested on positive groups.
-- [ ] It has been tested on hard negatives.
-- [ ] Results are recorded.
-- [ ] No claim is made that the baseline is the final similarity method.
+- [x] A working local perceptual-hash baseline exists.
+- [x] It can compare two photos.
+- [x] It has been tested on positive groups.
+- [x] It has been tested on hard negatives.
+- [x] Results are recorded.
+- [x] No claim is made that the baseline is the final similarity method.
 
 ---
 
