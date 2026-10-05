@@ -1,8 +1,7 @@
 import { readdir, stat } from 'fs/promises'
 import { extname, join } from 'path'
 import type { PhotoScanResult } from '@shared/types/photo'
-
-const SUPPORTED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.heic'])
+import { SUPPORTED_IMAGE_EXTENSIONS } from '@shared/constants/imageFormats'
 
 async function getFilesRecursively(directoryPath: string): Promise<string[]> {
   const entries = await readdir(directoryPath, {

@@ -8,6 +8,7 @@
     "format": "prettier --write .",
     "lint": "eslint --cache .",
     "evaluate:phash": "tsx --tsconfig tsconfig.node.json scripts/evaluate-phash.ts",
+    "test:dinov2": "tsx --tsconfig tsconfig.node.json scripts/test-dinov2.ts",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
@@ -22,13 +23,16 @@
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",
+    "@huggingface/transformers": "^4.3.0",
     "@stabilityprotocol.com/phash": "^1.0.0",
+    "heic-decode": "^2.1.0",
     "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.1.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
+    "@types/heic-decode": "^2.0.0",
     "@types/node": "^22.19.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

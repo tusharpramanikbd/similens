@@ -51,6 +51,7 @@ For Milestone 1:
 - `.jpeg`
 - `.png`
 - `.heic`
+- `.webp`
 
 Extension matching should be case-insensitive.
 

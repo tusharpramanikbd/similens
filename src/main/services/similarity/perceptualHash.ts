@@ -1,23 +1,19 @@
-import sharp from 'sharp'
 import { fromRgba } from '@stabilityprotocol.com/phash'
+
+import { decodeImage } from '@main/services/imageDecoder'
 
 /**
  * Generates a perceptual hash for a single image.
  *
- * The image is decoded with Sharp and converted into raw RGBA pixel data.
- * The pHash library then converts those pixels into a compact visual
- * fingerprint that can later be compared with another image hash.
+ * The image is decoded into raw RGBA pixel data through the shared image
+ * decoder, which handles the appropriate decoding strategy for each
+ * supported format. The pHash library then converts those pixels into a
+ * compact visual fingerprint for image comparison.
  */
 export async function generatePerceptualHash(imagePath: string): Promise<string> {
-  const { data, info } = await sharp(imagePath)
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
+  const image = await decodeImage(imagePath)
 
-  // The pHash library expects RGBA pixels as a Uint8ClampedArray.
-  const rgba = new Uint8ClampedArray(data)
-
-  return fromRgba(rgba, info.width, info.height)
+  return fromRgba(image.data, image.width, image.height)
 }
 
 /**

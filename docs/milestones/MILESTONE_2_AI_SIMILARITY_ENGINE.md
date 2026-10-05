@@ -504,17 +504,39 @@ If model files are downloaded on first use during development, distinguish **mod
 
 ## Feature 3 Acceptance Criteria
 
-- [ ] Exact pretrained model is documented.
-- [ ] Model license is reviewed.
-- [ ] Model loads locally.
-- [ ] Model is not reloaded unnecessarily for each photo.
-- [ ] A JPEG can produce an embedding.
-- [ ] A PNG can produce an embedding.
-- [ ] HEIC behavior is tested and documented.
-- [ ] Embedding has the expected shape/dimension.
-- [ ] Same image produces stable results.
-- [ ] Personal image data is not sent to a remote inference API.
-- [ ] Build/type checks pass.
+- [x] Exact pretrained model is documented.
+- [x] Model license is reviewed.
+- [x] Model loads locally.
+- [x] Model is not reloaded unnecessarily for each photo.
+- [x] A JPEG can produce an embedding.
+- [x] A PNG can produce an embedding.
+- [x] A WEBP image can produce an embedding.
+- [x] HEIC decoding is supported through the shared image decoder.
+- [x] Embedding has the expected 384-dimensional shape.
+- [x] Same image produces stable results.
+- [x] Unsupported image formats fail with a controlled error.
+- [x] Personal image data is not sent to a remote inference API.
+- [x] Build/type checks pass.
+
+## Image Format Handling
+
+The current supported image formats are:
+
+- `.jpg`
+- `.jpeg`
+- `.png`
+- `.webp`
+- `.heic`
+
+Image decoding is centralized through a shared decoder layer.
+
+JPEG, PNG, and WEBP currently use Sharp. HEIC uses a dedicated HEIC decoder because the default Sharp/libvips build does not include the HEVC decoder required by the tested HEIC files.
+
+The similarity and AI services consume decoded image data rather than implementing format-specific decoding themselves.
+
+Unsupported formats are rejected with a controlled error instead of being passed blindly to an image-processing library.
+
+This design keeps the decoding boundary extensible so additional formats can be added in future versions without rewriting the similarity pipeline.
 
 ---
 

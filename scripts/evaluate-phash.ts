@@ -3,6 +3,7 @@ import { extname, join } from 'path'
 import { homedir } from 'os'
 
 import { compareImagesPerceptually } from '@main/services/similarity/perceptualHash'
+import { SUPPORTED_IMAGE_EXTENSIONS } from '@shared/constants/imageFormats'
 
 const DATASET_ROOT = join(
   homedir(),
@@ -27,7 +28,7 @@ async function listImageFiles(folderName: string): Promise<string[]> {
     .filter((fileName) => {
       const extension = extname(fileName).toLowerCase()
 
-      return ['.jpg', '.jpeg', '.png', '.heic'].includes(extension)
+      return SUPPORTED_IMAGE_EXTENSIONS.has(extension)
     })
     .map((fileName) => join(folderPath, fileName))
 }
