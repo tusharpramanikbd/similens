@@ -9,6 +9,7 @@
     "lint": "eslint --cache .",
     "evaluate:phash": "tsx --tsconfig tsconfig.node.json scripts/evaluate-phash.ts",
     "test:dinov2": "tsx --tsconfig tsconfig.node.json scripts/test-dinov2.ts",
+    "evaluate:dinov2": "tsx --tsconfig tsconfig.node.json scripts/evaluate-dinov2.ts",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",

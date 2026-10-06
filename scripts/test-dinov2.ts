@@ -5,6 +5,7 @@ import {
   generateImageEmbedding,
   loadImageFeatureExtractor
 } from '@main/services/similarity/imageEmbedding'
+import { calculateCosineSimilarity } from '@main/services/similarity/embeddingSimilarity'
 
 async function main(): Promise<void> {
   console.log('Loading DINOv2 model...')
@@ -13,7 +14,7 @@ async function main(): Promise<void> {
 
   console.log('DINOv2 model loaded successfully.')
 
-  const testImagePath = join(
+  const testImagePathA = join(
     homedir(),
     'Desktop',
     'Projects',
@@ -21,17 +22,28 @@ async function main(): Promise<void> {
     'similens',
     'similarity-evaluation',
     'unrelated',
-    'nature.heic'
+    '1.jpeg'
   )
 
-  const embeddingA = await generateImageEmbedding(testImagePath)
-  const embeddingB = await generateImageEmbedding(testImagePath)
+  const testImagePathB = join(
+    homedir(),
+    'Desktop',
+    'Projects',
+    'datasets',
+    'similens',
+    'similarity-evaluation',
+    'unrelated',
+    '2.jpeg'
+  )
 
-  const embeddingsMatch = embeddingA.every((value, index) => value === embeddingB[index])
+  const embeddingA = await generateImageEmbedding(testImagePathA)
+  const embeddingB = await generateImageEmbedding(testImagePathB)
 
-  console.log('Embedding length:', embeddingA.length)
-  console.log('First 5 values:', embeddingA.slice(0, 5))
-  console.log('Repeated embedding matches:', embeddingsMatch)
+  const similarity = calculateCosineSimilarity(embeddingA, embeddingB)
+
+  console.log('Embedding A length:', embeddingA.length)
+  console.log('Embedding B length:', embeddingB.length)
+  console.log('Cosine similarity:', similarity)
 }
 
 main().catch((error) => {
