@@ -60,8 +60,8 @@ async function evaluatePairSet(setName: string, imagePaths: string[]): Promise<n
 /**
  * Prints basic statistics for a collection of Hamming distances.
  *
- * These values make it easier to compare the positive, hard-negative,
- * and unrelated evaluation sets.
+ * These values make it easier to compare the positive and negative
+ * evaluation sets.
  */
 function printSummary(name: string, distances: number[]): void {
   const min = Math.min(...distances)
@@ -76,35 +76,85 @@ function printSummary(name: string, distances: number[]): void {
 }
 
 /**
+ * Evaluates candidate pHash distance thresholds against the labeled data.
+ *
+ * Lower Hamming distance means greater visual similarity.
+ */
+function evaluateThresholds(positiveDistances: number[], negativeDistances: number[]): void {
+  const thresholds = [8, 10, 12, 14, 16, 18, 20, 22]
+
+  console.log('\nThreshold evaluation')
+
+  for (const threshold of thresholds) {
+    const truePositives = positiveDistances.filter((distance) => distance <= threshold).length
+
+    const falseNegatives = positiveDistances.length - truePositives
+
+    const falsePositives = negativeDistances.filter((distance) => distance <= threshold).length
+
+    const trueNegatives = negativeDistances.length - falsePositives
+
+    const precision =
+      truePositives + falsePositives === 0 ? 0 : truePositives / (truePositives + falsePositives)
+
+    const recall =
+      truePositives + falseNegatives === 0 ? 0 : truePositives / (truePositives + falseNegatives)
+
+    const f1 = precision + recall === 0 ? 0 : (2 * precision * recall) / (precision + recall)
+
+    console.log(`\nThreshold: ${threshold}`)
+    console.log(`True positives: ${truePositives}`)
+    console.log(`False negatives: ${falseNegatives}`)
+    console.log(`False positives: ${falsePositives}`)
+    console.log(`True negatives: ${trueNegatives}`)
+    console.log(`Precision: ${(precision * 100).toFixed(1)}%`)
+    console.log(`Recall: ${(recall * 100).toFixed(1)}%`)
+    console.log(`F1: ${f1.toFixed(4)}`)
+  }
+}
+
+/**
  * Runs the complete pHash baseline evaluation.
  *
  * It loads all dataset groups, compares every image pair, combines the
- * three positive groups, and prints summary statistics for each category.
+ * positive groups, and prints summary statistics for each category.
  */
 async function main(): Promise<void> {
   const group01 = await listImageFiles('group-01')
   const group02 = await listImageFiles('group-02')
-  const group03 = await listImageFiles('group-03')
+  const samePersonDifferentShots = await listImageFiles('same-person-different-shots')
   const hardNegatives = await listImageFiles('hard-negatives')
   const unrelated = await listImageFiles('unrelated')
 
   console.log('group-01:', group01.length)
   console.log('group-02:', group02.length)
-  console.log('group-03:', group03.length)
+  console.log('same-person-different-shots:', samePersonDifferentShots.length)
   console.log('hard-negatives:', hardNegatives.length)
   console.log('unrelated:', unrelated.length)
 
   const group01Distances = await evaluatePairSet('group-01', group01)
   const group02Distances = await evaluatePairSet('group-02', group02)
-  const group03Distances = await evaluatePairSet('group-03', group03)
+  const samePersonDifferentShotsDistances = await evaluatePairSet(
+    'same-person-different-shots',
+    samePersonDifferentShots
+  )
   const hardNegativeDistances = await evaluatePairSet('hard-negatives', hardNegatives)
   const unrelatedDistances = await evaluatePairSet('unrelated', unrelated)
 
-  const positiveDistances = [...group01Distances, ...group02Distances, ...group03Distances]
+  const positiveDistances = [...group01Distances, ...group02Distances]
 
   printSummary('Positive', positiveDistances)
+  printSummary('Same person different shots', samePersonDifferentShotsDistances)
   printSummary('Hard negatives', hardNegativeDistances)
   printSummary('Unrelated', unrelatedDistances)
+
+  const negativeDistances = [
+    ...samePersonDifferentShotsDistances,
+    ...hardNegativeDistances,
+    ...unrelatedDistances
+  ]
+
+  evaluateThresholds(positiveDistances, negativeDistances)
 }
 
 main().catch((error) => {
