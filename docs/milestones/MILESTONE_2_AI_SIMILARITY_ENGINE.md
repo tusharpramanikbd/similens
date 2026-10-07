@@ -3,8 +3,8 @@
 **Document type:** Source of Truth  
 **Project:** Similens  
 **Milestone:** 2 — AI Similarity Engine  
-**Status:** In Progress  
-**Current state:** Core implementation and evaluation complete; milestone-end cleanup and final regression validation remain.  
+**Status:** Complete
+**Current state:** Implementation, evaluation, cleanup, and final regression validation are complete.  
 **Purpose:** Define the exact scope, experiments, implementation tasks, acceptance criteria, evaluation evidence, and testing requirements for the first AI-powered similarity engine in Similens.
 
 ---
@@ -2240,7 +2240,7 @@ This larger visual validation should happen after Milestone 3 provides an effect
 - [x] Local-only image inference is verified.
 - [x] Current build/type validation has passed during Milestone 2 development.
 - [x] Engine output is structurally suitable for later renderer consumption.
-- [ ] Final post-cleanup regression validation is complete.
+- [x] Final post-cleanup regression validation is complete.
 
 ---
 
@@ -2376,7 +2376,7 @@ Milestone 2 is complete only when **all** required items are satisfied.
 - [x] No known crash exists in the current evaluation workflow.
 - [x] Current model/threshold limitations are documented.
 - [x] Current grouping-engine validation is complete.
-- [ ] Final post-cleanup regression validation is complete.
+- [x] Final post-cleanup regression validation is complete.
 
 ---
 
@@ -2395,11 +2395,11 @@ Milestone 2 is complete only when **all** required items are satisfied.
 
 Before Milestone 3 begins:
 
-- [ ] Refactor the current `groupSimilarPhotos()` implementation into smaller single-purpose helper functions without changing its validated behavior.
-- [ ] Review relevant code comments and replace command-like wording with neutral, implementation-focused wording.
-- [ ] Keep comments focused on what the code/function does rather than addressing the developer directly.
-- [ ] Run final lint, build, synthetic grouping tests, and real-dataset evaluations after the refactor.
-- [ ] Confirm ground-truth grouping still matches after cleanup.
+- [x] Refactor the current `groupSimilarPhotos()` implementation into smaller single-purpose helper functions without changing its validated behavior.
+- [x] Review relevant code comments and replace command-like wording with neutral, implementation-focused wording.
+- [x] Keep comments focused on what the code/function does rather than addressing the developer directly.
+- [x] Run final lint, build, synthetic grouping tests, and real-dataset evaluations after the refactor.
+- [x] Confirm ground-truth grouping still matches after cleanup.
 
 The cleanup is intentionally performed after algorithm validation so structural refactoring does not interfere with experimentation.
 
@@ -2866,18 +2866,6 @@ They do **not** demonstrate universal production accuracy or large-scale product
 
 The similarity threshold, grouping strategy, and model choice remain open to future evidence.
 
-Before Milestone 2 is marked complete:
+The Milestone 2 implementation, cleanup, and final regression validation are complete.
 
-```text
-groupSimilarPhotos() refactor
-        ↓
-comment-style cleanup
-        ↓
-final regression validation
-        ↓
-final documentation confirmation
-```
-
-must be completed.
-
-After that, Milestone 3 can begin integrating the validated similarity output into the visual review experience.
+The validated similarity engine is now ready to become the technical foundation for Milestone 3 — Similar Photo Review UI.

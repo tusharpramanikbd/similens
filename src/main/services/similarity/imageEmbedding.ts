@@ -2,6 +2,7 @@ import { pipeline, RawImage, type ImageFeatureExtractionPipeline } from '@huggin
 
 import { decodeImage } from '@main/services/imageDecoder'
 
+// Photo inference runs locally; model loading may download uncached model assets.
 const MODEL_ID = 'onnx-community/dinov2-small'
 
 /**

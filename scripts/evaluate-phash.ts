@@ -114,10 +114,8 @@ function evaluateThresholds(positiveDistances: number[], negativeDistances: numb
 }
 
 /**
- * Runs the complete pHash baseline evaluation.
- *
- * It loads all dataset groups, compares every image pair, combines the
- * positive groups, and prints summary statistics for each category.
+ * Evaluates pHash distances and thresholds using pairs within each labeled folder.
+ * Cross-folder pairs are excluded from the reported metrics.
  */
 async function main(): Promise<void> {
   const group01 = await listImageFiles('group-01')

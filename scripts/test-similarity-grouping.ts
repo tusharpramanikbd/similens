@@ -1,6 +1,8 @@
 import { groupSimilarPhotos } from '@main/services/similarity/similarityGrouping'
 import type { PhotoSimilarity } from '@shared/types/similarity'
 
+// Smoke-checks whether reversing photo-path input order preserves the same groups.
+// The result is reported for inspection; this script does not currently assert failure.
 const threshold = 0.9
 
 const photoPathsA = ['A.jpg', 'B.jpg', 'C.jpg', 'D.jpg']
@@ -50,4 +52,10 @@ console.log(JSON.stringify(groupsA, null, 2))
 console.log('\nResult B:')
 console.log(JSON.stringify(groupsB, null, 2))
 
-console.log('\nResults match:', JSON.stringify(groupsA) === JSON.stringify(groupsB))
+const resultsMatch = JSON.stringify(groupsA) === JSON.stringify(groupsB)
+
+console.log('\nResults match:', resultsMatch)
+
+if (!resultsMatch) {
+  process.exitCode = 1
+}

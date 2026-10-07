@@ -187,6 +187,7 @@ async function main(): Promise<void> {
 
   const embeddings = await generateEmbeddings(allImagePaths)
 
+  // Reported metrics include only within-folder pairs; cross-folder pairs are not evaluated here.
   const group01Similarities = evaluatePairSet('group-01', group01, embeddings)
 
   const group02Similarities = evaluatePairSet('group-02', group02, embeddings)

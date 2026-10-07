@@ -21,6 +21,7 @@ const DATASET_ROOT = join(
   'similarity-evaluation'
 )
 
+// Provisional cosine-similarity cutoff calibrated on the current evaluation dataset.
 const SIMILARITY_THRESHOLD = 0.9
 
 /**
@@ -142,20 +143,9 @@ function matchesExpectedGroups(
 }
 
 async function main(): Promise<void> {
-  // The dataset structure is loaded from ground-truth.json instead
-  // of being duplicated manually inside the evaluation script.
   const groundTruth = await loadGroundTruth()
 
-  // Each positive folder becomes one expected similarity group.
-  //
-  // Example:
-  // positiveGroups = ['group-01', 'group-02']
-  //
-  // becomes:
-  // [
-  //   [all group-01 photo paths],
-  //   [all group-02 photo paths]
-  // ]
+  // Each positive folder defines one expected group containing all its supported images.
   const positiveGroups = await Promise.all(
     groundTruth.positiveGroups.map((folderName) => listImageFiles(folderName))
   )
@@ -211,8 +201,6 @@ async function main(): Promise<void> {
 
   console.log(`Pairwise similarity time: ${similarityDuration.toFixed(1)} ms`)
 
-  // The production-style grouping algorithm is evaluated using the
-  // currently calibrated DINOv2 similarity threshold.
   const groupingStart = performance.now()
 
   const groups = groupSimilarPhotos(photoPaths, similarities, SIMILARITY_THRESHOLD)
@@ -237,8 +225,6 @@ async function main(): Promise<void> {
 
   console.log(`\nTotal groups: ${groups.length}`)
 
-  // The positive folders loaded from ground-truth.json are also the
-  // expected output groups. No group names are duplicated manually here.
   const expectedGroups = positiveGroups
 
   const groundTruthMatches = matchesExpectedGroups(groups, expectedGroups)

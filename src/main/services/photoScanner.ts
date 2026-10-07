@@ -30,6 +30,10 @@ function isSupportedImage(filePath: string): boolean {
   return SUPPORTED_IMAGE_EXTENSIONS.has(extension)
 }
 
+/**
+ * Recursively collects regular files with supported extensions without decoding them.
+ * Symlink entries are skipped; filesystem errors reject the entire scan.
+ */
 export async function scanPhotoFolder(folderPath: string): Promise<PhotoScanResult> {
   if (!folderPath.trim()) {
     throw new Error('Folder path is required')

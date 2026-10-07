@@ -1,7 +1,2 @@
-/**
- * Image formats currently supported by Similens.
- *
- * This list should be treated as the single source of truth when adding support
- * for new image formats in future versions.
- */
+/** Supported image extensions shared by scanning, decoding, and evaluation. */
 export const SUPPORTED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.heic', '.webp'])

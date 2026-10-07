@@ -13,6 +13,7 @@ type SimilarityLookup = Map<string, Map<string, number>>
 function createSimilarityLookup(similarities: PhotoSimilarity[]): SimilarityLookup {
   const lookup: SimilarityLookup = new Map()
 
+  // Similarity input is expected to contain at most one score per unordered photo pair.
   for (const { photoA, photoB, similarity } of similarities) {
     if (!lookup.has(photoA)) {
       lookup.set(photoA, new Map())
@@ -62,12 +63,6 @@ function createInitialGroups(photoPaths: string[]): string[][] {
   return photoPaths.map((photoPath) => [photoPath])
 }
 
-/**
- * Finds the index of the current group containing a photo.
- *
- * Groups may change as merges occur, so the lookup is performed against
- * the current grouping state.
- */
 function findGroupIndex(groups: string[][], photoPath: string): number {
   return groups.findIndex((group) => group.includes(photoPath))
 }
@@ -159,10 +154,8 @@ function mergeEligibleGroups(
 }
 
 /**
- * Converts temporary groups into deterministic similarity-group results.
- *
- * Singleton groups are excluded, photo paths inside each group are sorted,
- * and the groups themselves are ordered before stable IDs are assigned.
+ * Excludes singletons and sorts groups and their photo paths before assigning IDs.
+ * IDs reflect positions in this result and may change when the group set changes.
  */
 function createSimilarityGroups(groups: string[][]): SimilarityGroup[] {
   const normalizedGroups = groups
@@ -177,15 +170,11 @@ function createSimilarityGroups(groups: string[][]): SimilarityGroup[] {
 }
 
 /**
- * Groups photos using precomputed pairwise similarity scores.
+ * Groups photos using greedy strongest-pair-first processing and a complete-link merge condition.
  *
- * Photos begin as individual groups. Similarity pairs are processed from
- * strongest to weakest. Two groups are merged only when every cross-group
- * photo pair satisfies the similarity threshold, preserving complete-link
- * grouping behavior.
- *
- * Singleton groups are removed from the final result because Similens only
- * needs groups containing at least two similar photos.
+ * Photos start as singletons. Precomputed pairs are sorted once and considered
+ * from strongest to weakest. Groups merge only when every cross-group pair has
+ * a known score at or above the threshold. Singletons are omitted from the result.
  */
 export function groupSimilarPhotos(
   photoPaths: string[],
