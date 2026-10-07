@@ -4,24 +4,26 @@
 **Project:** Similens  
 **Milestone:** 2 — AI Similarity Engine  
 **Status:** In Progress  
-**Purpose:** Define the exact scope, experiments, implementation tasks, acceptance criteria, and testing requirements for the first AI-powered similarity engine in Similens.
+**Current state:** Core implementation and evaluation complete; milestone-end cleanup and final regression validation remain.  
+**Purpose:** Define the exact scope, experiments, implementation tasks, acceptance criteria, evaluation evidence, and testing requirements for the first AI-powered similarity engine in Similens.
 
 ---
 
-## 1. Milestone Goal
+# 1. Milestone Goal
 
 Milestone 2 introduces the first AI/computer-vision capability into Similens.
 
 By the end of this milestone, Similens should be able to:
 
-1. Take the supported local photo paths discovered in Milestone 1.
-2. Generate a visual representation for each photo.
-3. Compare photos based on visual similarity.
-4. Identify likely near-duplicate photos from the same shot, burst, scene, or moment.
-5. Group similar photos into candidate similarity groups.
-6. Avoid grouping clearly unrelated photos.
-7. Keep all inference local on the user's computer.
-8. Produce structured similarity-group data that the review UI can use in Milestone 3.
+1. Take supported local photo paths discovered in Milestone 1.
+2. Decode supported image formats locally.
+3. Generate a visual representation for each photo.
+4. Compare photos based on visual similarity.
+5. Identify likely near-duplicate photos from the same shot, burst, scene, or moment.
+6. Group similar photos into candidate similarity groups.
+7. Avoid grouping clearly unrelated or meaningfully different photos.
+8. Keep image inference local on the user's computer.
+9. Produce structured similarity-group data that the review UI can consume in Milestone 3.
 
 This milestone is about building and validating the **similarity engine**.
 
@@ -35,20 +37,24 @@ It is not about designing the final review interface or deleting photos.
 
 - Small labeled evaluation dataset
 - Ground-truth similarity groups
-- A lightweight non-AI baseline
+- Hard-negative evaluation examples
+- Lightweight non-AI baseline
 - Local pretrained vision model integration
+- Shared image decoding
 - Image preprocessing
 - Image embedding generation
-- Embedding normalization where required
 - Similarity calculation
 - Threshold experiments
-- Model/baseline comparison
+- False-positive analysis
+- False-negative analysis
+- Ground-truth correction when necessary
+- Baseline vs AI comparison
 - Similarity-group generation
-- Basic clustering/grouping strategy
-- Duplicate/near-duplicate candidate evaluation
-- False-positive and false-negative analysis
-- Performance measurement on a small/medium dataset
-- Local-only inference
+- Deterministic grouping strategy
+- Transitive grouping behavior
+- Programmatic group-level validation
+- Basic performance measurement
+- Local-only image inference
 - Structured similarity result types
 - Manual and programmatic validation
 
@@ -74,9 +80,11 @@ The following must **not** be implemented during Milestone 2:
 - cloud image uploads
 - semantic text-to-image search
 - production-scale vector database
+- persistent production embedding cache
 - automatic model fine-tuning
 - custom model training
 - background folder watching
+- large-scale production benchmarking
 - final cross-platform packaging optimization
 
 Those belong to later milestones.
@@ -87,56 +95,66 @@ Those belong to later milestones.
 
 The current validated technical direction is:
 
-- AI inference remains local.
-- No paid/cloud AI API is used.
-- DINOv2-small is the selected primary visual-feature model for the current implementation.
-- The exact model artifact is `onnx-community/dinov2-small`, based on `facebook/dinov2-small`.
-- pHash is retained as the lightweight non-AI baseline and comparison reference.
-- CLIP may still be evaluated later if future datasets reveal uncertainty, but the current DINOv2 vs pHash evaluation does not require another model comparison.
-- ONNX-compatible local inference is preferred.
-- Transformers.js is used for the current DINOv2 inference path.
-- Similarity is based on image features/embeddings rather than filenames.
+- AI image inference remains local.
+- No paid/cloud AI inference API is used.
+- DINOv2-small is the selected primary visual-feature model.
+- The exact model artifact is `onnx-community/dinov2-small`.
+- The base model is `facebook/dinov2-small`.
+- Transformers.js is used for the current inference path.
+- Current inference precision is FP32.
+- DINOv2 embeddings contain 384 values.
+- pHash is retained as the lightweight non-AI baseline.
+- Similarity is based on visual features rather than filenames.
 - Cosine similarity is used to compare DINOv2 embeddings.
-- The current provisional DINOv2 cosine-similarity threshold is `0.90`.
-- Threshold values are calibrated experimentally rather than guessed.
-- Thresholds remain provisional and must be revisited when the evaluation dataset becomes larger or more diverse.
+- Higher cosine similarity means greater visual similarity.
+- The current provisional DINOv2 threshold is `0.90`.
+- Thresholds are calibrated experimentally rather than guessed.
+- The current grouping engine uses deterministic greedy complete-link-style grouping.
+- Two groups are merged only when every cross-group photo pair satisfies the similarity threshold.
+- Singleton photos are excluded from the final similarity-group result.
 - Final delete/keep decisions remain outside the AI engine.
 
 The current model choice is based on the evaluation dataset available during Milestone 2.
 
 It must not be interpreted as proof that DINOv2 will achieve perfect accuracy on all production photo collections.
 
-If future evaluation reveals a material weakness, the model, threshold, or comparison strategy should be reassessed before changing the production direction.
+The current threshold remains provisional and must be revisited when the evaluation dataset becomes larger or more diverse.
+
+If future evaluation reveals a meaningful weakness, the model, threshold, grouping strategy, or ground truth should be reassessed.
 
 ---
 
 # 4. Architecture for Milestone 2
 
-The intended high-level flow is:
+The current high-level flow is:
 
 ```text
 Photo paths from Milestone 1
             ↓
       Image decoding
             ↓
-      Image preprocessing
+     Model preprocessing
             ↓
-   Visual feature extraction
+    DINOv2 inference
             ↓
-        Embeddings
+       Embeddings
             ↓
-   Similarity calculation
+   Cosine similarity
             ↓
- Threshold / grouping logic
+ Pairwise similarities
             ↓
- Candidate similar-photo groups
+Complete-link-style grouping
             ↓
- Structured result for renderer
+Candidate similarity groups
+            ↓
+Structured SimilarityGroup[]
+            ↓
+Future Milestone 3 review UI
 ```
 
-The AI engine should remain separate from React UI concerns.
+The AI engine remains separate from React UI concerns.
 
-The current implementation boundary includes:
+## Current Relevant Structure
 
 ```text
 src/
@@ -147,23 +165,43 @@ src/
 │   │   └── similarity/
 │   │       ├── perceptualHash.ts
 │   │       ├── imageEmbedding.ts
-│   │       └── embeddingSimilarity.ts
+│   │       ├── embeddingSimilarity.ts
+│   │       └── similarityGrouping.ts
 │
 ├── shared/
 │   ├── constants/
 │   │   └── imageFormats.ts
 │   └── types/
-│       └── photo.ts
+│       ├── photo.ts
+│       └── similarity.ts
 │
 └── renderer/
 
 scripts/
 ├── evaluate-phash.ts
 ├── test-dinov2.ts
-└── evaluate-dinov2.ts
+├── evaluate-dinov2.ts
+├── test-similarity-grouping.ts
+└── evaluate-grouping.ts
 ```
 
-The exact internal folder structure can continue to evolve as later Milestone 2 features are implemented.
+The internal structure can continue to evolve, but the current separation is:
+
+```text
+imageDecoder
+→ format-specific decoding
+
+imageEmbedding
+→ image → DINOv2 embedding
+
+embeddingSimilarity
+→ embedding vectors → cosine similarity
+
+similarityGrouping
+→ pairwise similarity data → groups
+```
+
+This keeps image decoding, AI inference, mathematical similarity, and grouping behavior separated.
 
 ---
 
@@ -172,17 +210,24 @@ The exact internal folder structure can continue to evolve as later Milestone 2 
 Milestone 2 contains six features.
 
 ```text
-Milestone 2 — AI Similarity Engine
+Feature 1
+Evaluation Dataset & Ground Truth
 
-Feature 1 — Evaluation Dataset & Ground Truth
-Feature 2 — Baseline Similarity Method
-Feature 3 — Local Vision Model Integration
-Feature 4 — Embedding Similarity & Threshold Calibration
-Feature 5 — Similarity Grouping / Clustering
-Feature 6 — Model Evaluation, Performance & Milestone Validation
+Feature 2
+Baseline Similarity Method
+
+Feature 3
+Local Vision Model Integration
+
+Feature 4
+Embedding Similarity & Threshold Calibration
+
+Feature 5
+Similarity Grouping / Clustering
+
+Feature 6
+Model Evaluation, Performance & Milestone Validation
 ```
-
-Each feature should be validated before moving to the next one.
 
 ---
 
@@ -190,15 +235,15 @@ Each feature should be validated before moving to the next one.
 
 ## Goal
 
-Create a small, controlled dataset that lets us objectively test whether Similens is detecting the right photos as similar.
+Create a controlled dataset that allows Similens to be evaluated against known expected behavior.
 
-Without a labeled test set, similarity thresholds and model choices would be based only on visual guesses.
+Without labeled ground truth, model and threshold decisions would rely only on subjective visual guesses.
 
-## Subtasks
+---
 
-### 1.1 Create a dedicated local evaluation folder
+## 1.1 Evaluation Dataset
 
-The current local dataset lives outside the public repository.
+The evaluation dataset lives outside the public repository.
 
 Current structure:
 
@@ -212,78 +257,99 @@ similarity-evaluation/
 └── ground-truth.json
 ```
 
-Current dataset composition:
+Current composition:
 
 ```text
 group-01                     → 5 positive near-duplicate photos
 group-02                     → 5 positive near-duplicate photos
+
 same-person-different-shots  → 5 negative photos
 hard-negatives               → 10 negative photos
 unrelated                    → 13 negative photos
 ```
 
-### 1.2 Collect positive near-duplicate groups
+Total:
 
-Positive examples should represent photos that the production app should genuinely place in the same near-duplicate group.
+```text
+38 photos
+```
 
-Examples include:
+---
+
+## 1.2 Positive Near-Duplicate Groups
+
+Positive examples represent photos that Similens should genuinely place in the same review group.
+
+Examples may include:
 
 - same burst
 - same pose with small movement
 - same moment with small framing changes
 - eyes open vs closed
-- small camera motion
+- small camera movement
 - slight exposure differences
 
-The current confirmed positive groups are:
+Current positive groups:
 
 ```text
 group-01 → 5 photos
 group-02 → 5 photos
 ```
 
-Each group contains photos that should belong together in the production app.
+---
 
-### 1.3 Collect hard negatives
+## 1.3 Hard Negatives
 
-Hard negatives are important.
+Hard negatives are visually related photos that should still remain separate.
 
 Examples:
 
-- same person, same place, different moment
+- same person, different shot
 - same room, different pose
-- same landscape, noticeably different composition
-- similar subject but not the same shot
+- similar background
+- same subject with meaningful framing changes
+- similar scene but different moment
+- noticeably different composition
 
-These should **not** be grouped as near-duplicates.
-
-The evaluation dataset currently contains two types of difficult negatives:
+Current difficult-negative sets:
 
 ```text
 same-person-different-shots
 hard-negatives
 ```
 
-`same-person-different-shots` contains selfies of the same person but with different camera angles, facial presentation, composition, or background details.
+`same-person-different-shots` contains selfies of the same person with differences in:
 
-These are intentionally labeled negative because the expected production behavior is to keep them in separate groups.
+- camera angle
+- facial presentation
+- framing
+- visible body position
+- background details
+- composition
 
-### 1.4 Collect unrelated negatives
+These are intentionally negative because the expected production behavior is to keep them separate.
 
-Include clearly unrelated photos such as:
+---
 
-- portrait
-- landscape
-- screenshot
-- food photo
-- building
-- document photo
+## 1.4 Unrelated Negatives
+
+The `unrelated` set includes clearly different images such as:
+
+- portraits
+- landscapes
+- screenshots
+- food photos
+- buildings
+- documents
+- other unrelated scenes
 
 These help detect obvious false positives.
 
-### 1.5 Define ground truth
+---
 
-The current ground-truth representation is:
+## 1.5 Ground Truth
+
+The dataset source of truth is:
 
 ```json
 {
@@ -299,7 +365,13 @@ The current ground-truth representation is:
 }
 ```
 
-### Ground-truth correction during evaluation
+Evaluation scripts should read this metadata instead of duplicating positive and negative folder names manually.
+
+This allows the evaluation dataset to evolve without requiring hard-coded group names inside the grouping validation script.
+
+---
+
+## Ground-Truth Correction During Evaluation
 
 The folder now named:
 
@@ -307,7 +379,7 @@ The folder now named:
 same-person-different-shots
 ```
 
-was originally labeled:
+was originally:
 
 ```text
 group-03
@@ -315,19 +387,19 @@ group-03
 
 and was initially treated as a positive near-duplicate group.
 
-During DINOv2 threshold evaluation, the photos in that group produced substantially lower similarity scores than `group-01` and `group-02`.
+During DINOv2 evaluation, this set produced substantially lower similarity scores than `group-01` and `group-02`.
 
-Manual inspection showed that the five photos were:
+Manual inspection showed that the photos were:
 
-- selfies of the same person,
-- taken from different camera angles,
-- with different facial presentation,
-- with meaningful framing/composition differences,
-- and with background differences.
+- selfies of the same person
+- taken from different camera angles
+- different in facial presentation
+- meaningfully different in framing/composition
+- different in visible background details
 
-The expected Similens production behavior is **not** to place all five photos in the same near-duplicate group.
+The intended Similens behavior is **not** to group all five photos together.
 
-Therefore, the original `group-03` positive label was incorrect.
+The original positive label was therefore incorrect.
 
 The folder was renamed to:
 
@@ -339,19 +411,26 @@ and reclassified as a negative evaluation set.
 
 All pHash and DINOv2 metrics used for model comparison were recalculated after this correction.
 
-Metrics calculated using the old `group-03` positive label are obsolete and must not be used for model decisions.
+Metrics calculated using the old `group-03` positive label are obsolete.
 
-### 1.6 Keep the dataset private if it contains personal photos
+---
 
-Do **not** commit personal evaluation photos to the public repository.
+## 1.6 Evaluation Data Privacy
 
-Only commit:
+Personal evaluation photos must remain local.
 
-- reusable test metadata,
-- synthetic/public sample assets if appropriate,
-- or documentation describing the test setup.
+Do not commit personal photos to the public repository.
 
-Personal photos should stay local and be ignored by Git.
+Only reusable items such as:
+
+- metadata
+- synthetic/public samples
+- evaluation scripts
+- documentation
+
+should be committed where appropriate.
+
+---
 
 ## Feature 1 Acceptance Criteria
 
@@ -359,21 +438,10 @@ Personal photos should stay local and be ignored by Git.
 - [x] It contains multiple positive near-duplicate groups.
 - [x] It contains hard-negative examples.
 - [x] It contains clearly unrelated examples.
-- [x] Ground-truth groups are documented.
+- [x] Ground truth is documented.
 - [x] Personal evaluation images are not accidentally committed to Git.
-- [x] The dataset is large enough to compare at least two similarity approaches meaningfully.
+- [x] The dataset is sufficient for the current MVP proof-of-concept comparison.
 - [x] Ambiguous ground-truth labels have been manually reviewed and corrected.
-
-## Feature 1 Validation
-
-A human can inspect the current dataset and answer:
-
-```text
-Which photos should belong together?
-Which photos should definitely remain separate?
-```
-
-The current ground truth reflects the intended production behavior rather than simply assuming that photos of the same person belong together.
 
 ---
 
@@ -381,81 +449,68 @@ The current ground truth reflects the intended production behavior rather than s
 
 ## Goal
 
-Implement a lightweight baseline before adding the neural-network model.
+Implement a lightweight non-neural baseline before selecting the primary AI method.
 
-The baseline gives us something measurable to compare the AI model against.
+The baseline provides a measurable comparison point.
 
-## Initial Baseline
+---
 
-Use perceptual hashing.
+## 2.1 Baseline
 
-The current implementation uses:
+The current baseline uses:
 
 ```text
 @stabilityprotocol.com/phash
 ```
 
-Image decoding is handled through the shared image decoder before RGBA pixel data is passed to the pHash implementation.
+Image decoding occurs through the shared decoder before RGBA pixel data is passed to the pHash implementation.
 
-This is not the final AI solution.
+pHash similarity is represented using Hamming distance.
 
-It is a reference point.
+```text
+lower distance
+→ more visually similar
 
-## Subtasks
+higher distance
+→ less visually similar
+```
 
-### 2.1 Choose a maintained local perceptual-hash implementation
+---
 
-Requirements:
-
-- works locally
-- compatible with the Electron/Node environment
-- acceptable license
-- no cloud/API dependency
-
-### 2.2 Create a baseline similarity service
-
-The baseline service is implemented separately from the embedding model.
-
-Current responsibilities include:
+## 2.2 Current Baseline API
 
 ```text
 generatePerceptualHash(imagePath)
+
 comparePerceptualHashes(hashA, hashB)
+
 compareImagesPerceptually(imagePathA, imagePathB)
 ```
 
-Similarity is represented by Hamming distance.
+---
 
-For pHash:
-
-```text
-lower distance = more visually similar
-higher distance = less visually similar
-```
-
-### 2.3 Run the baseline against the evaluation dataset
-
-The baseline evaluation is repeatable through:
+## 2.3 Repeatable Evaluation
 
 ```bash
 npm run evaluate:phash
 ```
 
-### 2.4 Record baseline findings
-
-The corrected evaluation shows that pHash performs well on very similar burst-style photos but has overlap between positive and difficult-negative pairs.
+---
 
 ## Baseline Evaluation Results
 
-The following results use the **corrected ground truth**.
+The following results use the corrected ground truth.
 
-Evaluation dataset:
+Pair counts:
 
-- Positive near-duplicate pairs: 20
-- Same-person-different-shot negative pairs: 10
-- Hard-negative pairs: 45
-- Unrelated negative pairs: 78
-- Total negative pairs: 133
+```text
+Positive near-duplicate pairs:            20
+Same-person-different-shot negative pairs: 10
+Hard-negative pairs:                       45
+Unrelated pairs:                           78
+
+Total negative pairs:                     133
+```
 
 Measured pHash Hamming distances:
 
@@ -466,29 +521,31 @@ Measured pHash Hamming distances:
 | Hard negatives | 45 | 16 | 44 | 29.7 |
 | Unrelated | 78 | 22 | 40 | 31.2 |
 
-### Score-distribution finding
+### Distribution Finding
 
-Positive pHash distances:
+Positive distances:
 
 ```text
 4 → 20
 ```
 
-Negative pHash distances begin as low as:
+Negative distances begin as low as:
 
 ```text
 16
 ```
 
-Therefore, the ranges overlap between approximately:
+Therefore, the ranges overlap approximately between:
 
 ```text
 16 → 20
 ```
 
-A single pHash threshold cannot perfectly separate all positive and negative pairs in the current evaluation dataset.
+A single pHash threshold cannot perfectly separate all positive and negative pairs in the current dataset.
 
-### pHash Threshold Evaluation
+---
+
+## pHash Threshold Evaluation
 
 For pHash:
 
@@ -496,8 +553,6 @@ For pHash:
 distance <= threshold
 → classify as similar
 ```
-
-Measured threshold results:
 
 | Threshold | TP | FN | FP | TN | Precision | Recall | F1 |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -510,15 +565,19 @@ Measured threshold results:
 | 20 | 20 | 0 | 5 | 128 | 80.0% | 100.0% | 0.8889 |
 | 22 | 20 | 0 | 12 | 121 | 62.5% | 100.0% | 0.7692 |
 
-### Provisional pHash Threshold
+---
 
-Pure F1 score is highest around threshold `18`.
+## Provisional pHash Threshold
 
-However, Similens places higher importance on avoiding false-positive grouping.
+Pure F1 is highest around:
 
-A false positive could place genuinely different photos into the same candidate near-duplicate group.
+```text
+18
+```
 
-For that product objective, the provisional pHash comparison threshold is:
+However, Similens places higher importance on minimizing false-positive grouping.
+
+The provisional product-oriented pHash threshold is therefore:
 
 ```text
 distance <= 14
@@ -537,23 +596,11 @@ Recall = 80%
 F1 = 0.8889
 ```
 
-This gives zero false positives on the current dataset but misses four genuine positive pairs.
+This gives zero false positives on the current dataset but misses four positive pairs.
 
-### Initial Findings
+pHash remains a useful baseline rather than the selected primary similarity method.
 
-The pHash baseline generally assigns lower Hamming distances to genuine near-duplicate photos than to negative examples.
-
-However, the positive and difficult-negative distributions overlap.
-
-The baseline is strong for:
-
-- almost identical images
-- small burst-style changes
-- small compression or pixel-level changes
-
-It becomes less reliable as meaningful visual variation increases.
-
-Because pHash cannot achieve both zero false positives and full positive recall on the current dataset, it remains a useful lightweight baseline rather than the selected primary similarity method.
+---
 
 ## Feature 2 Acceptance Criteria
 
@@ -563,9 +610,9 @@ Because pHash cannot achieve both zero false positives and full positive recall 
 - [x] It has been tested on difficult negatives.
 - [x] It has been tested on unrelated negatives.
 - [x] Corrected ground-truth results are recorded.
-- [x] Candidate pHash thresholds have been evaluated.
+- [x] Candidate thresholds have been evaluated.
 - [x] Baseline limitations are understood.
-- [x] No claim is made that the baseline is the final similarity method.
+- [x] No claim is made that pHash is the final similarity method.
 
 ---
 
@@ -575,11 +622,13 @@ Because pHash cannot achieve both zero false positives and full positive recall 
 
 Run a pretrained vision model locally and generate an embedding for a photo.
 
-The selected model for the current implementation is DINOv2-small.
+The selected model is DINOv2-small.
+
+---
 
 ## Implemented Model Configuration
 
-Current model:
+Model artifact:
 
 ```text
 onnx-community/dinov2-small
@@ -609,13 +658,13 @@ License:
 Apache-2.0
 ```
 
-Current inference precision:
+Inference precision:
 
 ```text
 FP32
 ```
 
-Approximate full FP32 ONNX model size:
+Approximate full FP32 model size:
 
 ```text
 ~88.5 MB
@@ -627,35 +676,35 @@ Embedding dimension:
 384
 ```
 
-The FP32 model is intentionally used during initial evaluation so that baseline correctness measurements are not affected by quantization.
+The FP32 model is intentionally used during initial evaluation so correctness measurements are not affected by quantization.
 
-## Subtasks
+---
 
-### 3.1 Confirm the exact model package/artifact
+## 3.1 DINOv2 Output
 
-The current model artifact and runtime have been verified.
+The selected ONNX model does not expose a generic pooled output compatible with the initial `pool: true` attempt.
 
-The DINOv2 ONNX model does not expose a dedicated pooled output compatible with the generic `pool: true` option.
-
-Instead, Similens uses the final hidden state of the first token — the DINOv2 CLS token — as the image-level representation.
-
-The resulting embedding contains:
+Similens instead uses the first token from the final hidden state:
 
 ```text
-384 values
+DINOv2 CLS token
 ```
 
-### 3.2 Install the minimum inference dependencies
+as the image-level representation.
 
-The current local inference path uses Transformers.js.
+Result:
 
-The implementation avoids adding multiple overlapping inference runtimes without a concrete need.
+```text
+number[384]
+```
 
-### 3.3 Create a dedicated model-loading service
+---
 
-Model loading is kept outside UI code.
+## 3.2 Model Loading
 
-The current implementation reuses the model-loading promise inside the process instead of loading a new model instance for every image.
+Model loading remains outside UI code.
+
+The model-loading promise is reused inside the current process instead of creating a new model instance for every photo.
 
 Conceptually:
 
@@ -664,16 +713,20 @@ first embedding request
         ↓
 initialize DINOv2 pipeline
         ↓
+cache pipeline promise
+        ↓
 reuse loaded pipeline
         ↓
 later embedding requests
 ```
 
-Transformers.js may also maintain its own filesystem model cache.
+Transformers.js may also maintain a filesystem model cache.
 
-The in-process loader cache and the library's filesystem cache serve different purposes.
+The in-process pipeline cache and filesystem model cache are separate mechanisms.
 
-### 3.4 Create image preprocessing
+---
+
+## 3.3 Shared Image Decoding
 
 Image decoding is centralized in:
 
@@ -681,76 +734,7 @@ Image decoding is centralized in:
 src/main/services/imageDecoder.ts
 ```
 
-Supported images are converted to raw RGBA data.
-
-The decoded image is then converted to RGB before being passed into the DINOv2 pipeline.
-
-Model-provided preprocessing handles the model-specific resizing, normalization, and tensor preparation.
-
-### 3.5 Generate a single image embedding
-
-Implemented conceptual API:
-
-```text
-generateImageEmbedding(imagePath)
-```
-
-Output:
-
-```text
-number[384]
-```
-
-### 3.6 Verify deterministic behavior
-
-Repeated embedding generation for the same unchanged image produced identical embedding values during the current evaluation.
-
-Example validation:
-
-```text
-Repeated embedding matches: true
-```
-
-### 3.7 Test several image formats
-
-The current supported formats are:
-
-- JPEG
-- PNG
-- WEBP
-- HEIC
-
-All four have successfully produced 384-dimensional DINOv2 embeddings.
-
-### 3.8 Keep model inference local
-
-Personal image data is processed locally.
-
-The model files may be downloaded from Hugging Face during model setup or initial development use.
-
-This is different from image inference.
-
-Similens does **not** upload the user's photo to a remote inference endpoint.
-
-## Feature 3 Acceptance Criteria
-
-- [x] Exact pretrained model is documented.
-- [x] Model license is reviewed.
-- [x] Model loads locally.
-- [x] Model is not reloaded unnecessarily for each photo.
-- [x] A JPEG can produce an embedding.
-- [x] A PNG can produce an embedding.
-- [x] A WEBP image can produce an embedding.
-- [x] HEIC decoding is supported through the shared image decoder.
-- [x] Embedding has the expected 384-dimensional shape.
-- [x] Same image produces stable results.
-- [x] Unsupported image formats fail with a controlled error.
-- [x] Personal image data is not sent to a remote inference API.
-- [x] Build/type checks pass.
-
-## Image Format Handling
-
-The current supported image formats are:
+Current supported formats:
 
 - `.jpg`
 - `.jpeg`
@@ -764,8 +748,6 @@ The supported extension list is centralized in:
 src/shared/constants/imageFormats.ts
 ```
 
-Image decoding is centralized through a shared decoder layer.
-
 JPEG, PNG, and WEBP currently use Sharp.
 
 HEIC uses:
@@ -774,9 +756,9 @@ HEIC uses:
 heic-decode
 ```
 
-because the default Sharp/libvips build used during development does not include the HEVC decoder required by the tested HEIC files.
+because the Sharp/libvips build used during development does not contain the HEVC decoder required by the tested HEIC files.
 
-The current decode path is:
+Current decode flow:
 
 ```text
 JPEG / PNG / WEBP
@@ -785,6 +767,7 @@ JPEG / PNG / WEBP
         ↓
       RGBA
 
+
 HEIC
         ↓
    heic-decode
@@ -792,11 +775,67 @@ HEIC
       RGBA
 ```
 
-Similarity and AI services consume the decoded image data instead of implementing format-specific decoding themselves.
+Decoded image data is converted to RGB before entering the DINOv2 pipeline.
 
-Unsupported formats are rejected with a controlled error before being passed into an image-processing library.
+Model-provided preprocessing handles model-specific resizing, normalization, and tensor preparation.
 
-This design keeps the decoding boundary extensible so additional formats can be added in future versions without rewriting the similarity pipeline.
+---
+
+## 3.4 Embedding API
+
+Current conceptual API:
+
+```text
+generateImageEmbedding(imagePath)
+```
+
+Output:
+
+```text
+number[384]
+```
+
+---
+
+## 3.5 Deterministic Embedding Behavior
+
+Repeated embedding generation for the same unchanged image produced identical values during current evaluation.
+
+Example:
+
+```text
+Repeated embedding matches: true
+```
+
+---
+
+## 3.6 Local-Only Image Inference
+
+Personal photos are processed locally.
+
+Model files may be downloaded from Hugging Face during setup or initial model use.
+
+That is different from image inference.
+
+Similens does **not** send the user's photo to a remote inference API.
+
+---
+
+## Feature 3 Acceptance Criteria
+
+- [x] Exact pretrained model is documented.
+- [x] Model license is reviewed.
+- [x] Model loads locally.
+- [x] Model is not reloaded unnecessarily for every photo.
+- [x] JPEG produces an embedding.
+- [x] PNG produces an embedding.
+- [x] WEBP produces an embedding.
+- [x] HEIC decoding is supported.
+- [x] Embedding has the expected 384-dimensional shape.
+- [x] Same image produces stable results.
+- [x] Unsupported formats fail with a controlled error.
+- [x] Personal image data is not sent to a remote inference API.
+- [x] Build/type checks pass.
 
 ---
 
@@ -804,13 +843,11 @@ This design keeps the decoding boundary extensible so additional formats can be 
 
 ## Goal
 
-Turn embeddings into a useful similarity signal and determine practical thresholds using real data.
+Turn DINOv2 embeddings into a useful similarity signal and select a practical threshold using labeled data.
 
-## Subtasks
+---
 
-### 4.1 Define the similarity function
-
-The implemented similarity function is cosine similarity.
+## 4.1 Cosine Similarity
 
 Current API:
 
@@ -818,7 +855,7 @@ Current API:
 calculateCosineSimilarity(embeddingA, embeddingB)
 ```
 
-For the DINOv2 representation:
+For DINOv2:
 
 ```text
 higher cosine similarity
@@ -828,7 +865,7 @@ lower cosine similarity
 → less visually similar
 ```
 
-The score is not treated as a probability.
+The score is not a probability.
 
 For example:
 
@@ -842,60 +879,56 @@ does **not** mean:
 94% probability that the photos are duplicates
 ```
 
-### 4.2 Verify basic similarity behavior
+---
 
-Initial sanity tests produced:
+## 4.2 Basic Sanity Tests
 
-| Comparison | Cosine similarity |
+Initial tests produced:
+
+| Comparison | Cosine Similarity |
 | --- | ---: |
 | Same image vs itself | ~1.0000 |
 | Known near-duplicate pair | 0.9550 |
 | Hard-negative pair | 0.7025 |
 | Unrelated pair | 0.0431 |
 
-The expected ordering was observed:
+Expected ordering:
 
 ```text
 same image
-   ↓ highest
-
+   ↓
 near duplicate
-   ↓ high
-
+   ↓
 hard negative
-   ↓ lower
-
+   ↓
 unrelated
-   ↓ low
 ```
 
-The same-image calculation produced:
+The same-image result was:
 
 ```text
 1.0000000000000002
 ```
 
-because of normal floating-point precision behavior.
+because of normal floating-point precision.
 
-Conceptually, the result is:
+Conceptually:
 
 ```text
 ≈ 1.0
 ```
 
-### 4.3 Generate pairwise evaluation results
+---
 
-The repeatable DINOv2 evaluation is available through:
+## 4.3 Repeatable DINOv2 Evaluation
 
 ```bash
 npm run evaluate:dinov2
 ```
 
-Embeddings are generated once per image during an evaluation run and stored in memory.
+One embedding is generated per image and stored in memory.
 
-Pairwise comparisons reuse the cached embeddings instead of repeatedly running DINOv2 for the same image.
-
-Conceptually:
+Pairwise comparisons reuse those embeddings.
 
 ```text
 image paths
@@ -904,12 +937,16 @@ one embedding per image
     ↓
 Map<imagePath, embedding>
     ↓
-pairwise cosine comparisons
+pairwise cosine similarities
 ```
 
-### 4.4 Inspect score distributions
+This avoids unnecessarily running DINOv2 repeatedly for the same image during one evaluation.
 
-The following results use the corrected ground truth.
+---
+
+## 4.4 Score Distributions
+
+Corrected ground-truth results:
 
 | Category | Pairs | Min | Max | Average |
 | --- | ---: | ---: | ---: | ---: |
@@ -918,19 +955,19 @@ The following results use the corrected ground truth.
 | Hard negatives | 45 | 0.4172 | 0.8331 | 0.6197 |
 | Unrelated | 78 | -0.0779 | 0.3842 | 0.0418 |
 
-The weakest genuine positive pair scored:
+Weakest genuine positive:
 
 ```text
 0.9243
 ```
 
-The strongest negative pair scored:
+Strongest negative:
 
 ```text
 0.8639
 ```
 
-Therefore, the current evaluation dataset has a separation gap:
+Current separation:
 
 ```text
 highest negative = 0.8639
@@ -946,9 +983,11 @@ Approximate gap:
 0.9243 - 0.8639 = 0.0604
 ```
 
-This clean gap did not exist in the pHash results.
+The pHash result did not produce a comparable clean gap.
 
-### 4.5 Test candidate thresholds
+---
+
+## 4.5 DINOv2 Threshold Evaluation
 
 For DINOv2:
 
@@ -956,8 +995,6 @@ For DINOv2:
 similarity >= threshold
 → classify as similar
 ```
-
-Measured threshold results:
 
 | Threshold | TP | FN | FP | TN | Precision | Recall | F1 |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -969,49 +1006,52 @@ Measured threshold results:
 | 0.85 | 20 | 0 | 1 | 132 | 95.2% | 100.0% | 0.9756 |
 | 0.90 | 20 | 0 | 0 | 133 | 100.0% | 100.0% | 1.0000 |
 
-### Manual false-positive inspection
+---
+
+## 4.6 Manual False-Positive Inspection
 
 At threshold `0.80`, five negative pairs were incorrectly classified as similar.
 
 They came from:
 
-- same-person-different-shots
-- hard-negatives
+- `same-person-different-shots`
+- `hard-negatives`
 
-Manual inspection confirmed that these pairs should remain separate in the production application.
+Manual inspection confirmed that these pairs should remain separate.
 
-Examples included photos of the same person with:
+Observed causes included:
 
-- similar background elements,
-- the same curtain or wall,
-- different framing,
-- different visible body/hand position,
-- different camera position,
-- or other meaningful composition differences.
+- same person
+- similar background
+- same curtain or wall
+- related composition
+- different framing
+- different visible body/hand position
+- different camera position
 
-This reinforced the decision to use a stricter threshold.
+This reinforced the need for a stricter threshold.
 
-### False-negative inspection and ground-truth correction
+---
 
-During the earlier evaluation, several pairs from the old `group-03` appeared as false negatives.
+## 4.7 False Negatives and Ground-Truth Correction
 
-Manual review showed that the issue was not necessarily model failure.
+During earlier evaluation, several pairs from the old `group-03` appeared as false negatives.
 
-The original ground-truth label itself was incorrect.
+Manual review showed that the main problem was the original ground-truth label.
 
-Those photos were moved into:
+Those photos were reclassified as:
 
 ```text
 same-person-different-shots
 ```
 
-and all evaluation metrics were recalculated.
+After correction, the current positive sets contain no false negatives at the selected threshold.
 
-After the correction, the current positive sets contain no false negatives at the selected threshold.
+---
 
-### 4.6 Choose an initial internal threshold
+## 4.8 Selected DINOv2 Threshold
 
-The current provisional DINOv2 cosine-similarity threshold is:
+Current provisional threshold:
 
 ```text
 0.90
@@ -1030,7 +1070,7 @@ Recall = 100.0%
 F1 = 1.0000
 ```
 
-This is a result on the **current small evaluation dataset only**.
+This result applies only to the **current 38-photo evaluation dataset**.
 
 It must not be described as:
 
@@ -1044,39 +1084,30 @@ or:
 Similens will have 100% production accuracy
 ```
 
-The current positive evaluation set contains only 20 pairwise positive examples from two groups.
+Future datasets should include greater variation in:
 
-Future evaluation should include more:
-
-- burst styles
 - people
-- camera devices
-- lighting conditions
-- crops
-- body movement
+- devices
+- lighting
+- camera angle
+- crop
+- movement
+- resolution
+- burst behavior
 - scene movement
-- resolution changes
 - difficult near-duplicates
 
-The threshold must be recalibrated if future data reveals overlap around `0.90`.
+The threshold should be recalibrated if future evaluation reveals overlap around `0.90`.
 
-### 4.7 Compare AI embeddings against the baseline
+---
 
-The final comparison for this feature uses the corrected ground truth.
+## 4.9 pHash vs DINOv2
 
-The comparison prioritizes avoiding false-positive grouping because a false positive can place genuinely different photos into the same candidate duplicate group.
-
-#### pHash baseline
-
-Provisional zero-false-positive-oriented threshold:
+### pHash
 
 ```text
-distance <= 14
-```
+threshold: distance <= 14
 
-Results:
-
-```text
 TP = 16
 FN = 4
 FP = 0
@@ -1087,17 +1118,11 @@ Recall = 80%
 F1 = 0.8889
 ```
 
-#### DINOv2
-
-Provisional threshold:
+### DINOv2
 
 ```text
-cosine similarity >= 0.90
-```
+threshold: cosine similarity >= 0.90
 
-Results:
-
-```text
 TP = 20
 FN = 0
 FP = 0
@@ -1108,7 +1133,7 @@ Recall = 100%
 F1 = 1.0000
 ```
 
-#### Side-by-side comparison
+### Comparison
 
 | Metric | pHash | DINOv2 |
 | --- | ---: | ---: |
@@ -1121,41 +1146,33 @@ F1 = 1.0000
 | Recall | 80% | 100% |
 | F1 | 0.8889 | 1.0000 |
 
-### Model Selection Decision
+---
 
-On the current corrected evaluation dataset, DINOv2 provides better separation between genuine near-duplicates and difficult negative examples.
+## Model Selection Decision
 
-pHash has overlapping score distributions:
+On the current corrected dataset, DINOv2 provides better separation between genuine near-duplicates and difficult negatives.
+
+pHash:
 
 ```text
-Positive:
+Positive range:
 4 → 20
 
-Negative:
+Negative range:
 starts at 16
 ```
 
-DINOv2 currently has a clean separation:
+DINOv2:
 
 ```text
 highest negative = 0.8639
 
         gap
 
-lowest positive = 0.9243
+lowest positive  = 0.9243
 ```
 
-With a zero-false-positive objective:
-
-```text
-pHash
-→ misses 4 genuine positive pairs
-
-DINOv2
-→ misses 0 genuine positive pairs
-```
-
-Therefore, the current selected primary similarity method for Similens is:
+Therefore the selected primary pairwise method is:
 
 ```text
 DINOv2-small embeddings
@@ -1165,15 +1182,17 @@ cosine similarity
 provisional threshold 0.90
 ```
 
-pHash remains useful as:
+pHash remains:
 
-- a lightweight baseline,
-- a sanity-check comparison,
-- and evidence supporting the decision to use the embedding-based approach.
+- a lightweight baseline
+- a sanity-check comparison
+- evidence supporting the embedding-based selection
 
-CLIP does not need to be evaluated at this stage because the current DINOv2 vs pHash comparison provides a sufficiently clear direction.
+CLIP does not need to be evaluated during this milestone because the current comparison provides a sufficiently clear direction.
 
-If a larger future dataset exposes meaningful DINOv2 weaknesses, additional models may then be evaluated.
+Additional models should only be introduced if future evidence justifies them.
+
+---
 
 ## Feature 4 Acceptance Criteria
 
@@ -1183,10 +1202,10 @@ If a larger future dataset exposes meaningful DINOv2 weaknesses, additional mode
 - [x] Threshold experiments are recorded.
 - [x] False positives are inspected manually.
 - [x] False negatives and apparent false negatives are inspected manually.
-- [x] Incorrect ground-truth labeling discovered during evaluation has been corrected.
+- [x] Incorrect ground truth discovered during evaluation has been corrected.
 - [x] An initial threshold is selected based on evidence.
 - [x] AI approach is compared against the baseline.
-- [x] Final current model choice is documented with limitations.
+- [x] Current model choice is documented with limitations.
 
 ---
 
@@ -1194,97 +1213,599 @@ If a larger future dataset exposes meaningful DINOv2 weaknesses, additional mode
 
 ## Goal
 
-Convert pairwise similarity results into usable candidate groups.
+Convert pairwise similarity scores into usable candidate near-duplicate groups.
 
-The output should represent groups of photos likely belonging to the same shot/burst/moment.
+The output should represent photos likely belonging to the same shot, burst, scene, or moment without aggressively chaining together meaningfully different photos.
 
-## Subtasks
+---
 
-### 5.1 Define shared similarity-group types
+## 5.1 Shared Similarity Types
 
-Create a structured type that can later be consumed by the renderer.
+Current shared types include:
 
-Conceptual example:
+```ts
+interface PhotoSimilarity {
+  photoA: string
+  photoB: string
+  similarity: number
+}
 
-```text
-SimilarityGroup
-- id
-- photos[]
+interface SimilarityGroup {
+  id: string
+  photos: string[]
+}
 ```
 
-Only include fields required by the current milestone.
+These types live in:
 
-### 5.2 Choose the first grouping strategy
+```text
+src/shared/types/similarity.ts
+```
 
-Start with the simplest strategy that behaves correctly on the evaluation dataset.
+`PhotoSimilarity` represents a precomputed pairwise similarity.
 
-Possible approaches:
+`SimilarityGroup` represents a structured group that can later be consumed by the renderer.
 
-- threshold graph + connected components
-- hierarchical clustering
-- another simple deterministic method
+---
 
-Do not introduce a complex clustering library unless the simpler approach is insufficient.
+## 5.2 Selected Grouping Strategy
 
-### 5.3 Handle transitive similarity carefully
+The current grouping engine uses a:
+
+```text
+deterministic
+greedy
+complete-link-style
+threshold grouping strategy
+```
+
+The main grouping API is:
+
+```text
+groupSimilarPhotos(
+  photoPaths,
+  similarities,
+  threshold
+)
+```
+
+---
+
+## Why Connected Components Were Not Selected
+
+Consider:
+
+```text
+A ↔ B = 0.96
+B ↔ C = 0.94
+A ↔ C = 0.88
+
+threshold = 0.90
+```
+
+A simple threshold graph plus connected components would produce:
+
+```text
+A — B — C
+```
+
+and may group:
+
+```text
+[A, B, C]
+```
+
+even though:
+
+```text
+A ↔ C
+```
+
+does not meet the threshold.
+
+This chaining behavior is too permissive for Similens.
+
+A false-positive group is more harmful than missing a borderline duplicate because the user may be reviewing photos for deletion.
+
+---
+
+## 5.3 Complete-Link-Style Merge Rule
+
+Every photo initially starts in its own temporary group.
+
+Similarity pairs are processed from strongest to weakest.
+
+Two current groups can merge only when:
+
+```text
+every photo in group A
+meets the threshold against
+every photo in group B
+```
+
+Conceptually:
+
+```text
+Group A = [A, B]
+Group B = [C]
+
+Check:
+
+A ↔ C >= threshold
+AND
+B ↔ C >= threshold
+```
+
+Only then can `C` join the group.
+
+This applies equally to:
+
+```text
+one photo ↔ one photo
+
+one photo ↔ group
+
+group ↔ group
+```
+
+because a single photo can be treated as a one-item group.
+
+---
+
+## 5.4 Similarity Lookup
+
+Precomputed similarities are converted into a bidirectional lookup structure.
+
+Conceptually:
+
+```text
+A
+├── B → 0.96
+└── C → 0.88
+
+B
+├── A → 0.96
+└── C → 0.94
+```
+
+Both:
+
+```text
+A → B
+```
+
+and:
+
+```text
+B → A
+```
+
+return the same similarity score.
+
+Full photo paths are used as keys, so identical filenames in different folders do not collide.
+
+A missing pairwise score is treated as a failed merge condition.
+
+---
+
+## 5.5 Strongest-Pair-First Processing
+
+Similarity pairs are sorted from highest score to lowest score.
 
 Example:
 
 ```text
-A ↔ B = highly similar
-B ↔ C = highly similar
-A ↔ C = borderline
+0.97
+0.96
+0.94
+0.91
+0.72
+...
 ```
 
-Determine whether A/B/C should form one group.
+This allows the strongest relationships to form groups first.
 
-Test this explicitly.
+When two pairs contain exactly the same similarity score, canonical photo-path ordering is used as a deterministic tie-breaker.
 
-### 5.4 Exclude singleton photos
+This prevents grouping results from depending on the original array order.
 
-Milestone 2 output is intended for similar-photo review.
+---
 
-A photo with no sufficiently similar neighbor should not create a one-photo similarity group.
+## 5.6 Singleton Exclusion
 
-### 5.5 Avoid duplicate membership where possible
+Temporary one-photo groups may exist during processing.
 
-A photo should not accidentally appear in multiple equivalent groups because of implementation artifacts.
+Final output removes groups where:
 
-If overlapping groups are intentionally allowed, document why.
+```text
+group.length === 1
+```
 
-### 5.6 Produce deterministic groups
+A photo with no sufficiently similar partner therefore remains outside the similarity-group result.
 
-Running the same unchanged dataset with the same configuration should produce the same grouping.
+---
 
-### 5.7 Return structured groups
+## 5.7 Duplicate Membership
 
-Conceptual output:
+Each photo exists in one current temporary group.
+
+When two groups merge:
+
+```text
+group A + group B
+→ one merged group
+```
+
+the second group is removed.
+
+This prevents a photo from accidentally appearing in multiple equivalent final groups.
+
+---
+
+## 5.8 Deterministic Output
+
+Final group members are normalized by photo-path ordering.
+
+Groups themselves are also normalized before IDs are assigned.
+
+This ensures that changing:
+
+- input photo order
+- pair direction
+- similarity-array order
+
+does not change the logical output.
+
+Example:
+
+```text
+Input:
+
+[A, B, C]
+```
+
+and:
+
+```text
+[C, B, A]
+```
+
+produce the same normalized output.
+
+---
+
+## 5.9 Synthetic Grouping Validation
+
+The grouping algorithm was tested against controlled synthetic cases.
+
+### Test 1 — Transitive Chaining
+
+```text
+A-B = 0.96
+B-C = 0.94
+C-D = 0.93
+
+A-C = 0.88
+B-D = 0.50
+A-D = 0.40
+
+threshold = 0.90
+```
+
+Expected:
+
+```text
+[A, B]
+[C, D]
+```
+
+Result:
+
+```text
+PASS
+```
+
+The algorithm does not create an invalid transitive chain.
+
+---
+
+### Test 2 — All Pairs Pass
+
+```text
+A-B = 0.96
+A-C = 0.94
+B-C = 0.95
+```
+
+Expected:
+
+```text
+[A, B, C]
+```
+
+Result:
+
+```text
+PASS
+```
+
+---
+
+### Test 3 — Singleton Exclusion
+
+```text
+A, B, C
+→ mutually similar
+
+D
+→ below threshold against all
+```
+
+Expected:
+
+```text
+[A, B, C]
+```
+
+with `D` excluded.
+
+Result:
+
+```text
+PASS
+```
+
+---
+
+### Test 4 — Missing Pairwise Similarity
+
+```text
+A-B = 0.96
+B-C = 0.95
+A-C = missing
+```
+
+Expected:
+
+```text
+[A, B]
+```
+
+`C` cannot join because complete-link verification cannot confirm `A-C`.
+
+Result:
+
+```text
+PASS
+```
+
+---
+
+### Test 5 — Equal-Score Input Ordering
+
+Equivalent similarity arrays with different ordering produced identical final output.
+
+Result:
+
+```text
+PASS
+```
+
+---
+
+### Test 6 — Reversed Pair Direction
+
+```text
+A-B
+```
+
+versus:
+
+```text
+B-A
+```
+
+produced identical output.
+
+Result:
+
+```text
+PASS
+```
+
+---
+
+### Test 7 — Reversed Photo Input Order
+
+```text
+[A, B, C]
+```
+
+versus:
+
+```text
+[C, B, A]
+```
+
+produced identical normalized output.
+
+Result:
+
+```text
+PASS
+```
+
+---
+
+### Test 8 — Multiple Independent Groups
+
+Input contained:
+
+```text
+A-B
+C-D
+```
+
+with low cross-group similarities.
+
+Both forward and reversed photo input order produced:
 
 ```json
 [
   {
     "id": "group-1",
     "photos": [
-      "/path/a.jpg",
-      "/path/b.jpg",
-      "/path/c.jpg"
+      "A.jpg",
+      "B.jpg"
+    ]
+  },
+  {
+    "id": "group-2",
+    "photos": [
+      "C.jpg",
+      "D.jpg"
     ]
   }
 ]
 ```
 
-The exact ID strategy can be simple in this milestone.
+Result:
+
+```text
+PASS
+```
+
+---
+
+## 5.10 Real Dataset Grouping Evaluation
+
+The full 38-photo evaluation dataset was processed as one collection.
+
+This is important because it tests not only within-category pairs but also all cross-folder relationships.
+
+Dataset:
+
+```text
+38 photos
+```
+
+Unique pairwise comparisons:
+
+```text
+38 × 37 / 2
+=
+703 pairs
+```
+
+Threshold:
+
+```text
+0.90
+```
+
+Produced groups:
+
+```text
+group-1
+  group-01/1.jpeg
+  group-01/2.jpeg
+  group-01/3.jpeg
+  group-01/4.jpeg
+  group-01/5.jpeg
+
+group-2
+  group-02/1.jpeg
+  group-02/2.jpeg
+  group-02/3.jpeg
+  group-02/4.jpeg
+  group-02/5.jpeg
+```
+
+Total:
+
+```text
+2 groups
+```
+
+No similarity group was produced from:
+
+```text
+same-person-different-shots
+hard-negatives
+unrelated
+```
+
+---
+
+## 5.11 Programmatic Ground-Truth Validation
+
+The grouping evaluation reads:
+
+```text
+ground-truth.json
+```
+
+as the source of truth.
+
+Positive and negative folders are loaded dynamically.
+
+The evaluation script therefore does not manually duplicate:
+
+```text
+group-01
+group-02
+...
+```
+
+inside the validation logic.
+
+Conceptually:
+
+```text
+ground-truth.json
+        ↓
+positive group folders
+negative set folders
+        ↓
+load photos
+        ↓
+run similarity engine
+        ↓
+actual SimilarityGroup[]
+        ↓
+compare with expected groups
+```
+
+The comparison:
+
+- ignores generated group IDs
+- normalizes photo order
+- normalizes group order
+- compares actual photo membership against expected group membership
+
+Current result:
+
+```text
+Ground-truth grouping match: true
+```
+
+If a future model, threshold, or grouping change causes a mismatch, the evaluation command exits with a failure status.
+
+---
 
 ## Feature 5 Acceptance Criteria
 
-- [ ] Pairwise similarity can be converted into groups.
-- [ ] Groups contain at least two photos.
-- [ ] Known positive groups are represented reasonably.
-- [ ] Clearly unrelated photos are not grouped.
-- [ ] Transitive edge cases are tested.
-- [ ] Duplicate/overlapping membership behavior is defined.
-- [ ] Group output is deterministic.
-- [ ] Group data is structured for later renderer consumption.
+- [x] Pairwise similarity can be converted into groups.
+- [x] Groups contain at least two photos.
+- [x] Known positive groups are represented correctly on the current dataset.
+- [x] Clearly unrelated photos are not grouped.
+- [x] Difficult negative sets are not incorrectly grouped.
+- [x] Transitive edge cases are tested.
+- [x] Duplicate/overlapping membership behavior is defined.
+- [x] Group output is deterministic.
+- [x] Missing pairwise similarities are handled conservatively.
+- [x] Group data is structured for later renderer consumption.
+- [x] Full-dataset grouping is programmatically compared against ground truth.
 
 ---
 
@@ -1292,34 +1813,41 @@ The exact ID strategy can be simple in this milestone.
 
 ## Goal
 
-Validate that the similarity engine is good enough to become the foundation for the review UI.
+Validate that the current similarity engine is technically sound enough to become the foundation for the review UI.
 
-## Subtasks
+---
 
-### 6.1 Create a repeatable evaluation script or test workflow
+## 6.1 Repeatable Evaluation Workflow
 
-The evaluation should be rerunnable after future model/threshold changes.
-
-Current repeatable evaluation commands already include:
+Current evaluation commands include:
 
 ```bash
 npm run evaluate:phash
 npm run test:dinov2
 npm run evaluate:dinov2
+npm run test:grouping
+npm run evaluate:grouping
 ```
 
-Feature 6 should extend this workflow as necessary once grouping is implemented.
+Production validation also includes:
 
-### 6.2 Measure quality on the labeled dataset
+```bash
+npm run lint
+npm run build
+```
 
-At minimum record:
+The workflow is designed to remain rerunnable after future:
 
-- correct positive matches
-- false positives
-- false negatives
-- group-level failures
+- model changes
+- threshold changes
+- grouping changes
+- ground-truth changes
 
-Current pairwise evaluation already records:
+---
+
+## 6.2 Pairwise Quality Evaluation
+
+The labeled dataset records:
 
 - true positives
 - false positives
@@ -1327,134 +1855,451 @@ Current pairwise evaluation already records:
 - true negatives
 - precision
 - recall
-- F1
+- F1 score
+- score distributions
+- threshold behavior
 
-Group-level evaluation remains pending until Feature 5 is implemented.
-
-### 6.3 Inspect false positives manually
-
-For each important false positive, ask:
+Current DINOv2 pairwise configuration:
 
 ```text
-Why did the engine think these belonged together?
+Model:
+onnx-community/dinov2-small
+
+Embedding:
+384-dimensional CLS representation
+
+Similarity:
+cosine similarity
+
+Threshold:
+>= 0.90
 ```
 
-Examples may include:
+Current corrected pairwise result:
+
+```text
+TP = 20
+FN = 0
+FP = 0
+TN = 133
+
+Precision = 100%
+Recall = 100%
+F1 = 1.0000
+```
+
+This result applies only to the current dataset.
+
+---
+
+## 6.3 Group-Level Quality Evaluation
+
+Feature 5 adds group-level validation.
+
+Current real-dataset result:
+
+```text
+Photos: 38
+Pairs: 703
+Expected positive groups: 2
+Produced groups: 2
+Ground-truth grouping match: true
+```
+
+The two expected positive groups were reproduced exactly.
+
+No false similarity group was created from the negative evaluation sets.
+
+---
+
+## 6.4 Manual Error Inspection
+
+False positives observed at lower thresholds were manually inspected.
+
+The investigation identified patterns including:
 
 - same person
-- same background
-- same scene
-- similar colors
-- repeated composition
+- similar background
+- related composition
+- same wall or curtain
+- similar scene structure
 
-Record meaningful patterns.
+These examples justified using a stricter threshold.
 
-### 6.4 Inspect false negatives manually
+Apparent false negatives from the original `group-03` were also manually inspected.
 
-For missed near-duplicate groups, inspect:
+That review revealed a ground-truth labeling problem rather than simply a model failure.
 
-- large movement
-- crop
-- lighting
-- face change
-- camera movement
-- rotation
-- resolution difference
+The ground truth was corrected before final metrics were used.
 
-Also verify that an apparent false negative is not actually a ground-truth labeling problem.
+---
 
-### 6.5 Measure basic performance
+## 6.5 Basic Performance Measurement
 
-Run on at least:
+Performance is measured using the current labeled evaluation dataset rather than assigning an arbitrary "small" or "medium" label.
 
-- small test set
-- medium test set
+Current dataset:
 
-Record:
+```text
+38 photos
+703 unique pairwise comparisons
+2 expected positive similarity groups
+```
 
-- model load time
-- embedding time
-- total processing time
-- approximate memory behavior if practical
+The purpose of the current benchmark is to verify that local similarity processing is practical for the Milestone 2 proof of concept.
 
-No production-grade benchmark suite is required yet.
+Large-scale production benchmarking is deferred until the review UI is integrated.
 
-### 6.6 Avoid unnecessary repeated inference
+At that stage, testing can be expanded to:
 
-Within one run, do not generate the same image embedding repeatedly unless required for testing.
+```text
+hundreds of photos
+thousands of photos
+larger real-world folders
+```
 
-The current DINOv2 evaluation script generates one embedding per image and reuses it for pairwise comparisons.
+This will allow both numerical and visual evaluation of grouping behavior.
 
-Persistent embedding caching belongs to a later optimization milestone unless it becomes necessary now.
+---
 
-### 6.7 Verify local-only processing
+## 6.6 Performance Measurement Method
 
-Confirm there is no photo upload or remote inference request.
+Performance was measured across:
 
-Model file download must remain clearly distinguished from image inference.
+```text
+5 fresh Node.js process runs
+```
 
-### 6.8 Run full production validation
+The DINOv2 model files were already available in the local filesystem cache.
 
-Run:
+Therefore:
+
+```text
+model download time
+```
+
+is **not** included in these measurements.
+
+Measured stages:
+
+- model load / initialization
+- embedding generation
+- average embedding time per image
+- pairwise cosine calculation
+- grouping
+- total similarity pipeline
+
+---
+
+## 6.7 Five-Run Benchmark Results
+
+### Individual Runs
+
+#### Run 1
+
+```text
+Model load time:                    106.3 ms
+Embedding generation time:        2761.5 ms
+Average embedding time per image:   72.7 ms
+Pairwise similarity time:            1.1 ms
+Grouping time:                       9.9 ms
+Total similarity pipeline time:   2879.0 ms
+Ground-truth grouping match: true
+```
+
+#### Run 2
+
+```text
+Model load time:                    105.1 ms
+Embedding generation time:        2824.2 ms
+Average embedding time per image:   74.3 ms
+Pairwise similarity time:            1.1 ms
+Grouping time:                       8.2 ms
+Total similarity pipeline time:   2938.8 ms
+Ground-truth grouping match: true
+```
+
+#### Run 3
+
+```text
+Model load time:                    106.3 ms
+Embedding generation time:        2802.1 ms
+Average embedding time per image:   73.7 ms
+Pairwise similarity time:            1.1 ms
+Grouping time:                       8.2 ms
+Total similarity pipeline time:   2918.1 ms
+Ground-truth grouping match: true
+```
+
+#### Run 4
+
+```text
+Model load time:                    112.4 ms
+Embedding generation time:        2797.1 ms
+Average embedding time per image:   73.6 ms
+Pairwise similarity time:            1.1 ms
+Grouping time:                       8.4 ms
+Total similarity pipeline time:   2919.3 ms
+Ground-truth grouping match: true
+```
+
+#### Run 5
+
+```text
+Model load time:                    108.1 ms
+Embedding generation time:        2796.3 ms
+Average embedding time per image:   73.6 ms
+Pairwise similarity time:            1.1 ms
+Grouping time:                       9.9 ms
+Total similarity pipeline time:   2915.6 ms
+Ground-truth grouping match: true
+```
+
+---
+
+## 6.8 Performance Summary
+
+| Metric | Average | Median |
+| --- | ---: | ---: |
+| Model load time | 107.6 ms | 106.3 ms |
+| Embedding generation | 2796.2 ms | 2797.1 ms |
+| Average embedding time per image | 73.6 ms | 73.6 ms |
+| Pairwise similarity calculation | 1.1 ms | 1.1 ms |
+| Grouping | 8.9 ms | 8.4 ms |
+| Total similarity pipeline | 2914.2 ms | 2918.1 ms |
+
+Representative median pipeline result:
+
+```text
+38 photos
+703 pairs
+
+Model load:
+~106 ms
+
+Embedding generation:
+~2.80 s
+
+Average embedding:
+~73.6 ms/image
+
+Pairwise similarity:
+~1.1 ms
+
+Grouping:
+~8.4 ms
+
+Total similarity pipeline:
+~2.92 s
+```
+
+---
+
+## 6.9 Performance Finding
+
+The dominant runtime cost is:
+
+```text
+DINOv2 embedding generation
+```
+
+It accounts for approximately:
+
+```text
+~96% of the measured pipeline time
+```
+
+Pairwise cosine comparison and grouping are comparatively inexpensive on the current dataset.
+
+Therefore, if future optimization becomes necessary, the primary optimization target should be embedding generation rather than prematurely optimizing cosine similarity or grouping logic.
+
+Possible future areas include:
+
+- batching
+- inference/runtime optimization
+- persistent embedding caching
+- hardware acceleration
+- model precision changes
+- parallel processing where appropriate
+
+These are not required for the current MVP milestone.
+
+---
+
+## 6.10 Avoid Repeated Inference
+
+Within one evaluation run:
+
+```text
+one image
+→ one embedding
+```
+
+The embedding is stored in memory.
+
+All pairwise comparisons reuse that embedding.
+
+For 38 photos:
+
+```text
+38 DINOv2 embedding generations
+```
+
+are performed, not:
+
+```text
+703 × 2 model inferences
+```
+
+Persistent embedding caching across application sessions is deferred to a later optimization stage.
+
+---
+
+## 6.11 Local-Only Processing
+
+Personal image inference remains local.
+
+The model may be downloaded from Hugging Face.
+
+However:
+
+```text
+model download
+≠
+photo inference
+```
+
+User photos are not sent to a remote inference endpoint.
+
+---
+
+## 6.12 Future Visual Validation
+
+Milestone 2 validates the grouping engine primarily through:
+
+- labeled ground truth
+- numerical similarity results
+- threshold experiments
+- synthetic grouping tests
+- programmatic group comparison
+- manual inspection of selected difficult pairs
+
+After the review UI is available, larger real-world photo collections should also be evaluated visually.
+
+This matters because a mathematically valid similarity relationship does not always guarantee that a group feels correct to a human reviewer.
+
+For example, an algorithm may produce:
+
+```text
+Photo A
+Photo B
+Photo C
+Photo D
+```
+
+inside one group because all required similarity conditions pass.
+
+However, a human reviewer may still feel that:
+
+```text
+Photo D
+```
+
+does not visually belong with the others.
+
+Future evaluation should therefore consider both:
+
+```text
+measured similarity/grouping behavior
++
+human visual judgment
+```
+
+If visually questionable groups appear, the following may need adjustment:
+
+- similarity threshold
+- grouping strategy
+- model choice
+- ground-truth dataset
+- product definition of "near duplicate"
+
+This larger visual validation should happen after Milestone 3 provides an effective review interface.
+
+---
+
+## Feature 6 Acceptance Criteria
+
+- [x] Evaluation workflow exists for the grouping engine.
+- [x] Pairwise similarity quality is measured on labeled data.
+- [x] Important pairwise false positives are reviewed.
+- [x] Important apparent false negatives are reviewed.
+- [x] Group-level quality is evaluated against ground truth.
+- [x] Basic performance is recorded.
+- [x] Multiple fresh-process benchmark runs are recorded.
+- [x] The final current model/threshold/grouping configuration is documented.
+- [x] Local-only image inference is verified.
+- [x] Current build/type validation has passed during Milestone 2 development.
+- [x] Engine output is structurally suitable for later renderer consumption.
+- [ ] Final post-cleanup regression validation is complete.
+
+---
+
+# 6. Milestone 2 End-to-End Acceptance Test
+
+The final engine configuration should satisfy the following workflow.
+
+1. Start from a clean development run.
+2. Load or initialize the DINOv2 model.
+3. Confirm the model initializes successfully.
+4. Process a known image.
+5. Confirm a 384-dimensional embedding is produced.
+6. Process the same unchanged image again.
+7. Confirm output is stable.
+8. Compare an image with itself.
+9. Compare a known near-duplicate pair.
+10. Compare a difficult negative pair.
+11. Compare an unrelated pair.
+12. Confirm score ordering is sensible.
+13. Run the full 38-photo labeled dataset.
+14. Generate all 703 unique pairwise similarities.
+15. Generate candidate similarity groups.
+16. Compare produced groups against `ground-truth.json`.
+17. Confirm both known positive groups are recovered.
+18. Confirm negative sets do not create false groups.
+19. Confirm singleton unrelated images are excluded.
+20. Confirm transitive chaining is handled conservatively.
+21. Confirm reversed input order produces deterministic output.
+22. Compare DINOv2 results against the pHash baseline.
+23. Confirm no personal image is uploaded to a cloud inference service.
+24. Record model, threshold, grouping strategy, and performance results.
+25. Run:
 
 ```bash
 npm run lint
 npm run build
 ```
 
-and the relevant evaluation commands.
+26. Run the relevant evaluation commands:
 
-## Feature 6 Acceptance Criteria
+```bash
+npm run evaluate:phash
+npm run test:dinov2
+npm run evaluate:dinov2
+npm run test:grouping
+npm run evaluate:grouping
+```
 
-- [ ] Evaluation workflow is complete for the final grouping engine.
-- [x] Pairwise similarity quality is measured on labeled data.
-- [x] Important pairwise false positives are reviewed.
-- [x] Important apparent false negatives are reviewed.
-- [ ] Basic performance is recorded.
-- [ ] The final model/threshold/grouping configuration is documented.
-- [x] Local-only image inference is verified.
-- [x] Current production build/type validation passes.
-- [ ] Engine output is ready for Milestone 3 UI integration.
+Most of these behaviors have already been validated individually during Features 1–6.
 
----
-
-# 6. Milestone 2 End-to-End Acceptance Test
-
-Use the labeled similarity evaluation dataset.
-
-Perform this flow:
-
-1. Start from a clean application/development run.
-2. Load or initialize the similarity model.
-3. Confirm the model initializes successfully.
-4. Process one known image.
-5. Confirm an embedding is produced.
-6. Process the same image again.
-7. Confirm output is stable.
-8. Compare an image with itself.
-9. Compare a known near-duplicate pair.
-10. Compare a hard-negative pair.
-11. Compare an unrelated pair.
-12. Confirm score ordering is sensible.
-13. Run the full labeled dataset.
-14. Generate candidate similar-photo groups.
-15. Compare produced groups against ground truth.
-16. Inspect false positives.
-17. Inspect false negatives.
-18. Confirm singleton unrelated images are excluded.
-19. Confirm same input/configuration produces deterministic grouping.
-20. Compare AI results against the perceptual-hash baseline.
-21. Confirm no personal image is uploaded to a cloud inference service.
-22. Record model/threshold/grouping configuration.
-23. Run production build/type validation.
-
-If these tests pass and known limitations are documented, Milestone 2 can be considered functionally complete.
+A final regression pass should be run after the milestone-end code cleanup.
 
 ---
 
 # 7. Milestone 2 Definition of Done
 
-Milestone 2 is complete only when **all** of the following are true.
+Milestone 2 is complete only when **all** required items are satisfied.
+
+---
 
 ## Evaluation Foundation
 
@@ -1464,8 +2309,11 @@ Milestone 2 is complete only when **all** of the following are true.
 - [x] Same-person-but-different-shot negatives exist.
 - [x] Unrelated negatives exist.
 - [x] Ground truth is documented.
+- [x] Evaluation scripts use the ground-truth metadata as the source of truth where appropriate.
 - [x] Ambiguous ground truth has been manually reviewed.
 - [x] Private test photos are excluded from Git.
+
+---
 
 ## Baseline
 
@@ -1474,42 +2322,63 @@ Milestone 2 is complete only when **all** of the following are true.
 - [x] Baseline thresholds are evaluated.
 - [x] Baseline limitations are understood.
 
+---
+
 ## AI Model
 
 - [x] Exact model is documented.
 - [x] Model licensing is reviewed.
 - [x] Model runs locally.
 - [x] Image embeddings are generated.
+- [x] Model output shape is verified.
 - [x] Supported decoding behavior is documented.
 - [x] No remote image inference occurs.
 
+---
+
 ## Similarity
 
-- [x] Similarity calculation works.
+- [x] Cosine similarity calculation works.
 - [x] Positive and negative score behavior is measured.
 - [x] Threshold experiments are complete for the current dataset.
 - [x] Initial threshold is evidence-based.
 - [x] False positives are reviewed.
 - [x] Apparent false negatives are reviewed.
+- [x] Incorrect ground truth discovered during evaluation has been corrected.
 - [x] Baseline vs AI comparison is documented.
 - [x] DINOv2 is selected as the current primary similarity method.
 
+---
+
 ## Grouping
 
-- [ ] Similar photos can be grouped.
-- [ ] Unrelated singleton images are excluded.
-- [ ] Transitive similarity behavior is tested.
-- [ ] Group output is deterministic.
-- [ ] Structured group result exists for future UI use.
+- [x] Similar photos can be grouped.
+- [x] Groups contain at least two photos.
+- [x] Unrelated singleton images are excluded.
+- [x] Difficult negatives are excluded from false groups on the current dataset.
+- [x] Transitive similarity behavior is explicitly tested.
+- [x] Missing pairwise data is handled conservatively.
+- [x] Duplicate membership behavior is defined.
+- [x] Group output is deterministic.
+- [x] Structured group results exist for future UI use.
+- [x] Real-dataset grouping matches current ground truth.
+
+---
 
 ## Quality
 
 - [x] Baseline vs AI comparison is documented.
-- [ ] Basic performance is measured.
-- [x] Current build/type checks pass.
+- [x] Pairwise quality is measured.
+- [x] Group-level quality is measured.
+- [x] Basic performance is measured.
+- [x] Five-run performance benchmark is recorded.
+- [x] Current build/type checks have passed during development.
 - [x] No known crash exists in the current evaluation workflow.
 - [x] Current model/threshold limitations are documented.
-- [ ] Final grouping-engine validation is complete.
+- [x] Current grouping-engine validation is complete.
+- [ ] Final post-cleanup regression validation is complete.
+
+---
 
 ## Scope Discipline
 
@@ -1518,12 +2387,71 @@ Milestone 2 is complete only when **all** of the following are true.
 - [x] No final review gallery has been implemented.
 - [x] No cloud AI API has been introduced.
 - [x] No unnecessary custom model training has been introduced.
+- [x] No premature production-scale optimization has been introduced.
 
 ---
 
-# 8. Suggested Implementation Order
+## Milestone-End Code Cleanup
 
-Follow this order:
+Before Milestone 3 begins:
+
+- [ ] Refactor the current `groupSimilarPhotos()` implementation into smaller single-purpose helper functions without changing its validated behavior.
+- [ ] Review relevant code comments and replace command-like wording with neutral, implementation-focused wording.
+- [ ] Keep comments focused on what the code/function does rather than addressing the developer directly.
+- [ ] Run final lint, build, synthetic grouping tests, and real-dataset evaluations after the refactor.
+- [ ] Confirm ground-truth grouping still matches after cleanup.
+
+The cleanup is intentionally performed after algorithm validation so structural refactoring does not interfere with experimentation.
+
+---
+
+# 8. Current Final Milestone Configuration
+
+The currently validated similarity-engine configuration is:
+
+```text
+Image decoding
+    ↓
+shared image decoder
+
+Model
+    ↓
+onnx-community/dinov2-small
+
+Representation
+    ↓
+384-dimensional CLS embedding
+
+Similarity
+    ↓
+cosine similarity
+
+Threshold
+    ↓
+>= 0.90
+
+Grouping
+    ↓
+deterministic greedy complete-link-style grouping
+
+Singleton behavior
+    ↓
+excluded
+
+Ground-truth validation
+    ↓
+ground-truth.json
+
+Output
+    ↓
+SimilarityGroup[]
+```
+
+---
+
+# 9. Suggested Implementation / Completion Order
+
+The Milestone 2 development sequence is:
 
 ```text
 Feature 1
@@ -1559,65 +2487,109 @@ Commit
 
 
 Feature 5
-Similarity Grouping / Clustering
+Similarity Grouping
         ↓
-Validate groups
+Synthetic validation
+        ↓
+Real-dataset validation
+        ↓
+Ground-truth comparison
         ↓
 Commit
 
 
 Feature 6
-Evaluation, Performance & Full Validation
+Performance & Full Evaluation
         ↓
-Milestone acceptance test
+Benchmark
+        ↓
+Document current configuration
         ↓
 Commit
+
+
+Milestone-End Cleanup
         ↓
+Refactor grouping implementation
+        ↓
+Clean comment wording
+        ↓
+Final regression validation
+        ↓
+Final documentation sync
+        ↓
+Commit
+
+
 Milestone 2 complete
+        ↓
+Define Milestone 3
 ```
 
-Small, meaningful sub-milestone commits are preferred over waiting for an entire feature if a feature becomes large.
+Small, meaningful commits are preferred over one large milestone commit.
 
 ---
 
-# 9. Suggested Git Commit Checkpoints
+# 10. Git Commit Checkpoints
 
-Exact wording may change based on the implementation.
+Milestone 2 has used small, reviewable commits.
 
-Examples:
+Relevant examples include:
 
 ```text
 chore: add similarity evaluation dataset metadata
+
 feat: add perceptual similarity baseline
+
 feat: add DINOv2, shared decoding, HEIC and WEBP support
+
 feat: add DINOv2 similarity evaluation and threshold calibration
+
 feat: compare DINOv2 and perceptual similarity baselines
-feat: group near-duplicate photos
+
+feat: add deterministic complete-link similarity grouping
+
+test: validate similarity grouping on evaluation dataset
+
+refactor: load grouping ground truth from dataset metadata
+```
+
+Remaining milestone-end work should also use focused commits.
+
+Possible final checkpoints:
+
+```text
+refactor: simplify similarity grouping implementation
+
+chore: clean similarity engine comments
+
 chore: complete milestone 2 validation
 ```
 
-Commit when a coherent, stable, testable unit is complete.
+Exact wording may change based on the final diff.
 
 ---
 
-# 10. Important Experimental Rules
+# 11. Important Experimental Rules
 
-## Do not declare a model "best" before testing
+## Do Not Declare a Model Universally "Best"
 
-A newer or larger model is not automatically better for Similens.
+A newer or larger model is not automatically better.
 
 The relevant question is:
 
 ```text
 Which method best separates our real near-duplicate photos
-from visually similar but genuinely different photos?
+from visually related but genuinely different photos?
 ```
 
-The current evaluation supports DINOv2 over pHash for the present dataset.
+The current evidence supports DINOv2 over pHash for this dataset.
 
-This remains an evidence-based current selection rather than a universal claim about every possible model or dataset.
+This is an evidence-based project decision, not a universal model-ranking claim.
 
-## Do not treat similarity as probability
+---
+
+## Do Not Treat Similarity as Probability
 
 A score such as:
 
@@ -1625,41 +2597,59 @@ A score such as:
 0.94
 ```
 
-should not automatically be presented as:
+must not automatically be presented as:
 
 ```text
-94% probability that these are duplicates
+94% probability that these photos are duplicates
 ```
 
-unless it has actually been calibrated that way.
+unless the score has specifically been calibrated as a probability.
 
-## Ground truth must represent product intent
+---
+
+## Ground Truth Must Represent Product Intent
 
 Being:
 
-- the same person,
-- in the same room,
-- against a similar background,
-- or visually related
+- the same person
+- in the same room
+- against the same background
+- visually related
+- semantically related
 
 does not automatically make two photos near-duplicates.
 
-Ground-truth labels must reflect whether the production app should actually place the photos in the same review group.
+Ground truth should represent the behavior expected from the production app.
 
-If evaluation results expose a questionable label, manually inspect the photos before treating the case as a model error.
+If evaluation results expose a questionable label, the images should be manually inspected before the case is treated as model failure.
 
-## Protect personal data
+---
 
-Evaluation photos may be personal.
+## False Positives Matter
+
+For Similens, false-positive grouping is especially important.
+
+If genuinely different photos are placed into one duplicate-review group, the user may incorrectly treat them as redundant.
+
+The current threshold and complete-link grouping strategy are intentionally conservative for this reason.
+
+---
+
+## Protect Personal Data
+
+Evaluation photos may contain personal content.
 
 Rules:
 
 - keep personal test images local
 - do not commit them
-- do not upload them to external AI APIs
-- use Git ignore rules when needed
+- do not send them to remote inference APIs
+- use Git ignore rules where appropriate
+- distinguish model-file downloading from photo inference
 
-## Prefer evidence over architecture complexity
+---
+
+## Prefer Evidence Over Complexity
 
 Start simple.
 
@@ -1667,16 +2657,36 @@ Only add:
 
 - more models
 - more clustering algorithms
+- persistent caching
 - vector indexes
-- caching layers
+- advanced optimization
+- large-scale infrastructure
 
 when an observed limitation justifies them.
 
 ---
 
-# 11. Expected Milestone Output
+## Numerical Validation Is Not the End of Visual Validation
 
-At the end of Milestone 2, Similens should have an internal capability conceptually similar to:
+Programmatic ground-truth matching is necessary but not sufficient for the final product.
+
+After the review UI is available, groups should also be judged visually.
+
+A group may satisfy the current mathematical rule while still feeling questionable to a human reviewer.
+
+Future product validation should combine:
+
+```text
+quantitative evaluation
++
+human visual inspection
+```
+
+---
+
+# 12. Current Milestone Output
+
+The internal engine can now conceptually perform:
 
 ```text
 Input:
@@ -1690,7 +2700,19 @@ Input:
 
           ↓
 
-Local similarity engine
+Local DINOv2 feature extraction
+
+          ↓
+
+Embeddings
+
+          ↓
+
+Pairwise cosine similarity
+
+          ↓
+
+Threshold + complete-link grouping
 
           ↓
 
@@ -1708,19 +2730,51 @@ Output:
 ]
 ```
 
-`d.jpg` would remain outside the result if it has no sufficiently similar match.
+If:
 
-Milestone 3 will be responsible for presenting these groups to the user.
+```text
+/photos/d.jpg
+```
+
+has no sufficiently similar match, it remains outside the result.
+
+Milestone 3 will be responsible for presenting similarity groups visually to the user.
 
 ---
 
-# 12. Next Milestone
+# 13. Known Current Limitations
 
-After Milestone 2 is complete, the next milestone is:
+The current results are encouraging but intentionally limited.
+
+Current limitations include:
+
+- only 38 labeled evaluation photos
+- only two confirmed positive groups
+- limited camera/device diversity
+- limited subject diversity
+- limited lighting variation
+- limited crop/resolution variation
+- no large-folder benchmark yet
+- no review UI yet
+- no large-scale human visual group inspection yet
+- threshold `0.90` remains provisional
+- grouping behavior may need adjustment after broader visual review
+- no persistent embedding cache
+- no inference batching optimization
+- no formal memory benchmark
+- no quantized-model comparison
+
+These limitations are acceptable for the current proof-of-concept milestone.
+
+---
+
+# 14. Next Milestone
+
+After Milestone 2 cleanup and final validation, the next milestone is:
 
 ## Milestone 3 — Similar Photo Review UI
 
-Expected areas:
+Expected areas include:
 
 - similarity-group presentation
 - responsive image grid
@@ -1730,6 +2784,16 @@ Expected areas:
 - photo details
 - UI states for similarity results
 
+The review UI will also make broader real-world visual evaluation practical.
+
+Once groups can be seen directly, larger folders can be tested and judged using both:
+
+```text
+algorithmic evidence
++
+human visual judgment
+```
+
 The exact Milestone 3 scope should be defined in a separate source-of-truth document before implementation begins.
 
 ---
@@ -1738,26 +2802,82 @@ The exact Milestone 3 scope should be defined in a separate source-of-truth docu
 
 Milestone 2 is the point where Similens becomes genuinely AI-powered.
 
-Its job is to transform:
+Its current validated pipeline is:
 
 ```text
 Structured local photo paths
             ↓
-    Local visual analysis
+      Local image decoding
             ↓
- Evidence-based similarity
+      DINOv2 embeddings
             ↓
- Candidate near-duplicate groups
+       Cosine similarity
+            ↓
+     Threshold >= 0.90
+            ↓
+Deterministic complete-link grouping
+            ↓
+Candidate near-duplicate groups
+            ↓
+Ground-truth validation
 ```
 
-The current evidence supports DINOv2-small embeddings with cosine similarity as the primary pairwise similarity approach.
-
-The current provisional cosine-similarity threshold is:
+The current evidence supports:
 
 ```text
-0.90
+DINOv2-small
++
+384-dimensional CLS embeddings
++
+cosine similarity
++
+provisional threshold 0.90
++
+deterministic complete-link-style grouping
 ```
 
-That threshold is based on the current corrected evaluation dataset and must remain open to recalibration as the dataset grows.
+as the first Similens similarity-engine configuration.
 
-The milestone is complete when grouping is technically usable, experimentally justified, locally executed, performance-validated, and ready to be consumed by the review UI.
+On the current 38-photo labeled dataset:
+
+```text
+703 pairwise comparisons
+
+2 expected positive groups
+
+2 produced positive groups
+
+0 negative-set groups
+
+Ground-truth grouping match: true
+```
+
+Five fresh-process benchmark runs produced a representative median total similarity-pipeline time of approximately:
+
+```text
+2.92 seconds
+```
+
+for the current 38-photo dataset with model files already locally cached.
+
+These results demonstrate that the current approach works as a Milestone 2 proof of concept.
+
+They do **not** demonstrate universal production accuracy or large-scale production performance.
+
+The similarity threshold, grouping strategy, and model choice remain open to future evidence.
+
+Before Milestone 2 is marked complete:
+
+```text
+groupSimilarPhotos() refactor
+        ↓
+comment-style cleanup
+        ↓
+final regression validation
+        ↓
+final documentation confirmation
+```
+
+must be completed.
+
+After that, Milestone 3 can begin integrating the validated similarity output into the visual review experience.

@@ -1,8 +1,12 @@
 import { readFile, readdir } from 'fs/promises'
 import { extname, join, relative } from 'path'
 import { homedir } from 'os'
+import { performance } from 'perf_hooks'
 
-import { generateImageEmbedding } from '@main/services/similarity/imageEmbedding'
+import {
+  generateImageEmbedding,
+  loadImageFeatureExtractor
+} from '@main/services/similarity/imageEmbedding'
 import { calculateCosineSimilarity } from '@main/services/similarity/embeddingSimilarity'
 import { groupSimilarPhotos } from '@main/services/similarity/similarityGrouping'
 import { SUPPORTED_IMAGE_EXTENSIONS } from '@shared/constants/imageFormats'
@@ -167,20 +171,59 @@ async function main(): Promise<void> {
   // so cross-folder similarities are also evaluated.
   const photoPaths = [...positiveGroups.flat(), ...negativeGroups.flat()]
 
+  const pipelineStart = performance.now()
+
   console.log(`Photos: ${photoPaths.length}`)
+
+  console.log('Loading DINOv2 model...')
+
+  const modelLoadStart = performance.now()
+
+  await loadImageFeatureExtractor()
+
+  const modelLoadDuration = performance.now() - modelLoadStart
+
+  console.log(`Model load time: ${modelLoadDuration.toFixed(1)} ms`)
+
   console.log('Generating DINOv2 embeddings...')
+
+  const embeddingStart = performance.now()
 
   const embeddings = await generateEmbeddings(photoPaths)
 
+  const embeddingDuration = performance.now() - embeddingStart
+
+  const averageEmbeddingDuration = embeddingDuration / photoPaths.length
+
+  console.log(`Embedding generation time: ${embeddingDuration.toFixed(1)} ms`)
+
+  console.log(`Average embedding time per image: ${averageEmbeddingDuration.toFixed(1)} ms`)
+
   console.log('Generating pairwise similarities...')
+
+  const similarityStart = performance.now()
 
   const similarities = generatePairwiseSimilarities(photoPaths, embeddings)
 
+  const similarityDuration = performance.now() - similarityStart
+
   console.log(`Pairs: ${similarities.length}`)
+
+  console.log(`Pairwise similarity time: ${similarityDuration.toFixed(1)} ms`)
 
   // The production-style grouping algorithm is evaluated using the
   // currently calibrated DINOv2 similarity threshold.
+  const groupingStart = performance.now()
+
   const groups = groupSimilarPhotos(photoPaths, similarities, SIMILARITY_THRESHOLD)
+
+  const groupingDuration = performance.now() - groupingStart
+
+  const pipelineDuration = performance.now() - pipelineStart
+
+  console.log(`Grouping time: ${groupingDuration.toFixed(1)} ms`)
+
+  console.log(`Total similarity pipeline time: ${pipelineDuration.toFixed(1)} ms`)
 
   console.log(`\nSimilarity groups at threshold ${SIMILARITY_THRESHOLD}:`)
 
