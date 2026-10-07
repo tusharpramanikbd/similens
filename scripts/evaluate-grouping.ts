@@ -1,4 +1,4 @@
-import { readdir } from 'fs/promises'
+import { readFile, readdir } from 'fs/promises'
 import { extname, join, relative } from 'path'
 import { homedir } from 'os'
 
@@ -20,7 +20,34 @@ const DATASET_ROOT = join(
 const SIMILARITY_THRESHOLD = 0.9
 
 /**
+ * Describes the structure of the evaluation dataset metadata.
+ *
+ * Positive groups contain photos that are expected to be grouped together.
+ * Negative sets contain photos that should remain outside similarity groups.
+ */
+interface GroundTruth {
+  positiveGroups: string[]
+  negativeSets: Record<string, string>
+}
+
+/**
+ * Loads the evaluation dataset ground truth from its JSON metadata file.
+ *
+ * The JSON file acts as the source of truth for which folders contain
+ * positive groups and which folders contain negative evaluation sets.
+ */
+async function loadGroundTruth(): Promise<GroundTruth> {
+  const groundTruthPath = join(DATASET_ROOT, 'ground-truth.json')
+
+  const content = await readFile(groundTruthPath, 'utf8')
+
+  return JSON.parse(content) as GroundTruth
+}
+
+/**
  * Supported image paths are collected from one evaluation folder.
+ *
+ * Files with unsupported extensions are ignored.
  */
 async function listImageFiles(folderName: string): Promise<string[]> {
   const folderPath = join(DATASET_ROOT, folderName)
@@ -39,7 +66,9 @@ async function generateEmbeddings(photoPaths: string[]): Promise<Map<string, num
   const embeddings = new Map<string, number[]>()
 
   for (const photoPath of photoPaths) {
-    embeddings.set(photoPath, await generateImageEmbedding(photoPath))
+    const embedding = await generateImageEmbedding(photoPath)
+
+    embeddings.set(photoPath, embedding)
   }
 
   return embeddings
@@ -48,6 +77,8 @@ async function generateEmbeddings(photoPaths: string[]): Promise<Map<string, num
 /**
  * Every unique photo pair is converted into a PhotoSimilarity entry
  * using the already-generated embeddings.
+ *
+ * Each pair is evaluated only once because cosine similarity is symmetric.
  */
 function generatePairwiseSimilarities(
   photoPaths: string[],
@@ -67,10 +98,12 @@ function generatePairwiseSimilarities(
         throw new Error('Missing image embedding')
       }
 
+      const similarity = calculateCosineSimilarity(embeddingA, embeddingB)
+
       similarities.push({
         photoA,
         photoB,
-        similarity: calculateCosineSimilarity(embeddingA, embeddingB)
+        similarity
       })
     }
   }
@@ -84,6 +117,9 @@ function generatePairwiseSimilarities(
  * Photo paths inside each group and the groups themselves are normalized
  * before comparison so filesystem or input ordering does not affect
  * the validation result.
+ *
+ * Group IDs are intentionally ignored because ground truth is concerned
+ * with which photos belong together rather than generated group names.
  */
 function matchesExpectedGroups(
   actualGroups: SimilarityGroup[],
@@ -92,7 +128,7 @@ function matchesExpectedGroups(
   const normalizeGroups = (groups: string[][]): string[][] =>
     groups
       .map((group) => [...group].sort((a, b) => a.localeCompare(b)))
-      .sort((groupA, groupB) => groupA[0].localeCompare(groupB[0]))
+      .sort((groupA, groupB) => (groupA[0] ?? '').localeCompare(groupB[0] ?? ''))
 
   const actual = normalizeGroups(actualGroups.map((group) => group.photos))
 
@@ -102,19 +138,34 @@ function matchesExpectedGroups(
 }
 
 async function main(): Promise<void> {
-  const group01 = await listImageFiles('group-01')
-  const group02 = await listImageFiles('group-02')
-  const samePersonDifferentShots = await listImageFiles('same-person-different-shots')
-  const hardNegatives = await listImageFiles('hard-negatives')
-  const unrelated = await listImageFiles('unrelated')
+  // The dataset structure is loaded from ground-truth.json instead
+  // of being duplicated manually inside the evaluation script.
+  const groundTruth = await loadGroundTruth()
 
-  const photoPaths = [
-    ...group01,
-    ...group02,
-    ...samePersonDifferentShots,
-    ...hardNegatives,
-    ...unrelated
-  ]
+  // Each positive folder becomes one expected similarity group.
+  //
+  // Example:
+  // positiveGroups = ['group-01', 'group-02']
+  //
+  // becomes:
+  // [
+  //   [all group-01 photo paths],
+  //   [all group-02 photo paths]
+  // ]
+  const positiveGroups = await Promise.all(
+    groundTruth.positiveGroups.map((folderName) => listImageFiles(folderName))
+  )
+
+  // Negative folder names are read dynamically from the ground-truth
+  // metadata. These photos participate in the full evaluation but are
+  // not expected to produce similarity groups.
+  const negativeGroups = await Promise.all(
+    Object.values(groundTruth.negativeSets).map((folderName) => listImageFiles(folderName))
+  )
+
+  // All positive and negative photos are combined into one collection
+  // so cross-folder similarities are also evaluated.
+  const photoPaths = [...positiveGroups.flat(), ...negativeGroups.flat()]
 
   console.log(`Photos: ${photoPaths.length}`)
   console.log('Generating DINOv2 embeddings...')
@@ -127,6 +178,8 @@ async function main(): Promise<void> {
 
   console.log(`Pairs: ${similarities.length}`)
 
+  // The production-style grouping algorithm is evaluated using the
+  // currently calibrated DINOv2 similarity threshold.
   const groups = groupSimilarPhotos(photoPaths, similarities, SIMILARITY_THRESHOLD)
 
   console.log(`\nSimilarity groups at threshold ${SIMILARITY_THRESHOLD}:`)
@@ -141,12 +194,16 @@ async function main(): Promise<void> {
 
   console.log(`\nTotal groups: ${groups.length}`)
 
-  const expectedGroups = [group01, group02]
+  // The positive folders loaded from ground-truth.json are also the
+  // expected output groups. No group names are duplicated manually here.
+  const expectedGroups = positiveGroups
 
   const groundTruthMatches = matchesExpectedGroups(groups, expectedGroups)
 
   console.log(`Ground-truth grouping match: ${groundTruthMatches}`)
 
+  // A grouping mismatch causes the evaluation command to finish with
+  // a failure exit code so regressions can be detected automatically.
   if (!groundTruthMatches) {
     process.exitCode = 1
   }
@@ -154,5 +211,6 @@ async function main(): Promise<void> {
 
 main().catch((error) => {
   console.error('Grouping evaluation failed:', error)
+
   process.exitCode = 1
 })
