@@ -2,8 +2,11 @@ import { app, shell, BrowserWindow, dialog, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+
 import { scanPhotoFolder } from '@main/services/photoScanner'
 import type { PhotoScanResponse } from '@shared/types/photo'
+import { analyzePhotoSimilarity } from '@main/services/similarity/similarityAnalyzer'
+import type { SimilarityAnalysisResponse } from '@shared/types/similarity'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -71,6 +74,27 @@ app.whenReady().then(() => {
         return {
           success: false,
           error: 'Unable to scan this folder.'
+        }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'photos:analyze-similarity',
+    async (_, photoPaths: string[]): Promise<SimilarityAnalysisResponse> => {
+      try {
+        const groups = await analyzePhotoSimilarity(photoPaths)
+
+        return {
+          success: true,
+          groups
+        }
+      } catch (error) {
+        console.error('Failed to analyze photo similarity:', error)
+
+        return {
+          success: false,
+          error: 'Unable to analyze photo similarity.'
         }
       }
     }

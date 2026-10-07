@@ -1,12 +1,17 @@
 import { useState } from 'react'
+
 import type { ScanStatus } from '@renderer/types/scan'
 import type { PhotoScanResult } from '@shared/types/photo'
+import type { SimilarityGroup } from '@shared/types/similarity'
 
 function App(): React.JSX.Element {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle')
   const [scanResult, setScanResult] = useState<PhotoScanResult | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [similarityGroups, setSimilarityGroups] = useState<SimilarityGroup[] | null>(null)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
 
   const handleSelectFolder = async (): Promise<void> => {
     const folderPath = await window.similens.selectFolder()
@@ -15,6 +20,9 @@ function App(): React.JSX.Element {
       setSelectedFolder(folderPath)
       setScanStatus('folder-selected')
       setScanResult(null)
+
+      setSimilarityGroups(null)
+      setAnalysisError(null)
     }
   }
 
@@ -36,6 +44,29 @@ function App(): React.JSX.Element {
 
     setScanResult(response.result)
     setScanStatus('success')
+  }
+
+  const handleAnalyzeSimilarity = async (): Promise<void> => {
+    if (!scanResult || scanResult.photoCount < 2) {
+      return
+    }
+
+    setIsAnalyzing(true)
+    setAnalysisError(null)
+    setSimilarityGroups(null)
+
+    const response = await window.similens.analyzeSimilarPhotos(scanResult.photos)
+
+    setIsAnalyzing(false)
+
+    if (!response.success) {
+      setAnalysisError(response.error)
+      return
+    }
+
+    setSimilarityGroups(response.groups)
+
+    console.log('Similarity groups:', response.groups)
   }
 
   return (
@@ -64,6 +95,14 @@ function App(): React.JSX.Element {
           ) : (
             <p>Photos found: {scanResult.photoCount}</p>
           )}
+
+          {scanResult.photoCount >= 2 && (
+            <button type="button" onClick={handleAnalyzeSimilarity} disabled={isAnalyzing}>
+              {isAnalyzing ? 'Analyzing...' : 'Find Similar Photos'}
+            </button>
+          )}
+          {similarityGroups && <p>Similar photo groups found: {similarityGroups.length}</p>}
+          {analysisError && <p>{analysisError}</p>}
         </div>
       )}
 

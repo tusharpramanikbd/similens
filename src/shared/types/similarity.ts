@@ -9,3 +9,13 @@ export interface SimilarityGroup {
   id: string
   photos: string[]
 }
+
+export type SimilarityAnalysisResponse =
+  | {
+      success: true
+      groups: SimilarityGroup[]
+    }
+  | {
+      success: false
+      error: string
+    }

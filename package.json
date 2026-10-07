@@ -12,6 +12,7 @@
     "evaluate:dinov2": "tsx --tsconfig tsconfig.node.json scripts/evaluate-dinov2.ts",
     "test:grouping": "tsx --tsconfig tsconfig.node.json scripts/test-similarity-grouping.ts",
     "evaluate:grouping": "tsx --tsconfig tsconfig.node.json scripts/evaluate-grouping.ts",
+    "test:similarity-analyzer": "tsx --tsconfig tsconfig.node.json scripts/test-similarity-analyzer.ts",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
