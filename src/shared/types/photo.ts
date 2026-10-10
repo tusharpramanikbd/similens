@@ -13,3 +13,5 @@ export type PhotoScanResponse =
       success: false
       error: string
     }
+
+export type PhotoThumbnailUrlMap = Record<string, string | null>

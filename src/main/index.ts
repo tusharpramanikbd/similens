@@ -1,12 +1,25 @@
-import { app, shell, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, dialog, ipcMain, protocol } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
 import { scanPhotoFolder } from '@main/services/photoScanner'
-import type { PhotoScanResponse } from '@shared/types/photo'
+import type { PhotoScanResponse, PhotoThumbnailUrlMap } from '@shared/types/photo'
 import { analyzePhotoSimilarity } from '@main/services/similarity/similarityAnalyzer'
 import type { SimilarityAnalysisResponse } from '@shared/types/similarity'
+import { registerPhotoProtocolHandler } from '@main/services/photoProtocol'
+import { registerAccessiblePhotos, getPhotoThumbnailUrl } from '@main/services/photoAccessRegistry'
+
+// Registers the local image scheme before Electron becomes ready.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'similens-photo',
+    privileges: {
+      standard: true,
+      secure: true
+    }
+  }
+])
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -41,6 +54,8 @@ function createWindow(): void {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.tusharpramanik.similens')
 
+  registerPhotoProtocolHandler()
+
   // Toolkit shortcuts toggle DevTools with F12 in development and disable reload in production.
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -61,8 +76,12 @@ app.whenReady().then(() => {
   ipcMain.handle(
     'photos:scan-folder',
     async (_, folderPath: string): Promise<PhotoScanResponse> => {
+      registerAccessiblePhotos([])
+
       try {
         const result = await scanPhotoFolder(folderPath)
+
+        registerAccessiblePhotos(result.photos)
 
         return {
           success: true,
@@ -99,6 +118,16 @@ app.whenReady().then(() => {
       }
     }
   )
+
+  ipcMain.handle('photos:get-thumbnail-urls', (_, photoPaths: string[]): PhotoThumbnailUrlMap => {
+    const thumbnailUrls: PhotoThumbnailUrlMap = {}
+
+    for (const photoPath of photoPaths) {
+      thumbnailUrls[photoPath] = getPhotoThumbnailUrl(photoPath)
+    }
+
+    return thumbnailUrls
+  })
 
   createWindow()
 

@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-import type { PhotoScanResponse } from '@shared/types/photo'
+import type { PhotoScanResponse, PhotoThumbnailUrlMap } from '@shared/types/photo'
 import type { SimilarityAnalysisResponse } from '@shared/types/similarity'
 
 // The renderer receives named folder operations; filesystem access stays in the main process.
@@ -13,6 +13,9 @@ const similensAPI = {
   },
   analyzeSimilarPhotos: (photoPaths: string[]): Promise<SimilarityAnalysisResponse> => {
     return ipcRenderer.invoke('photos:analyze-similarity', photoPaths)
+  },
+  getThumbnailUrls: (photoPaths: string[]): Promise<PhotoThumbnailUrlMap> => {
+    return ipcRenderer.invoke('photos:get-thumbnail-urls', photoPaths)
   }
 }
 

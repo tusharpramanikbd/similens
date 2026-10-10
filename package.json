@@ -13,6 +13,7 @@
     "test:grouping": "tsx --tsconfig tsconfig.node.json scripts/test-similarity-grouping.ts",
     "evaluate:grouping": "tsx --tsconfig tsconfig.node.json scripts/evaluate-grouping.ts",
     "test:similarity-analyzer": "tsx --tsconfig tsconfig.node.json scripts/test-similarity-analyzer.ts",
+    "test:thumbnails": "tsx --tsconfig tsconfig.node.json scripts/test-photo-thumbnail.ts",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
