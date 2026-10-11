@@ -1,7 +1,7 @@
 import { protocol } from 'electron'
 
 import { getAccessiblePhotoPath } from '@main/services/photoAccessRegistry'
-import { generatePhotoThumbnail } from '@main/services/photoThumbnail'
+import { generatePhotoPreview, generatePhotoThumbnail } from '@main/services/photoThumbnail'
 
 /**
  * Registers the handler for local photo thumbnail requests.
@@ -21,7 +21,7 @@ export function registerPhotoProtocolHandler(): void {
     const url = new URL(request.url)
 
     if (
-      url.hostname !== 'thumbnail' ||
+      (url.hostname !== 'thumbnail' && url.hostname !== 'preview') ||
       url.port ||
       url.search ||
       url.hash ||
@@ -43,9 +43,12 @@ export function registerPhotoProtocolHandler(): void {
     }
 
     try {
-      const thumbnail = await generatePhotoThumbnail(photoPath)
+      const image =
+        url.hostname === 'preview'
+          ? await generatePhotoPreview(photoPath)
+          : await generatePhotoThumbnail(photoPath)
 
-      return new Response(new Uint8Array(thumbnail), {
+      return new Response(new Uint8Array(image), {
         status: 200,
         headers: {
           'Content-Type': 'image/webp',
@@ -54,9 +57,9 @@ export function registerPhotoProtocolHandler(): void {
         }
       })
     } catch (error) {
-      console.error('Failed to generate photo thumbnail:', error)
+      console.error('Failed to generate photo image:', error)
 
-      return new Response('Unable to load photo thumbnail', {
+      return new Response('Unable to load photo image', {
         status: 500
       })
     }

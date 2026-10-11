@@ -3,13 +3,15 @@ interface PhotoCardProps {
   thumbnailUrl: string | null | undefined
   isSelected: boolean
   onToggleSelection: (photoPath: string) => void
+  onPreview: (photoPath: string) => void
 }
 
 export function PhotoCard({
   photoPath,
   thumbnailUrl,
   isSelected,
-  onToggleSelection
+  onToggleSelection,
+  onPreview
 }: PhotoCardProps): React.JSX.Element {
   const fileName = photoPath.split(/[\\/]/).pop() || 'Photo'
 
@@ -20,12 +22,19 @@ export function PhotoCard({
       }`}
     >
       {thumbnailUrl ? (
-        <img
-          src={thumbnailUrl}
-          alt={fileName}
-          loading="lazy"
-          className="h-48 w-full bg-canvas object-contain"
-        />
+        <button
+          type="button"
+          onClick={(): void => onPreview(photoPath)}
+          aria-label={`Preview ${fileName}`}
+          className="block w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-brand"
+        >
+          <img
+            src={thumbnailUrl}
+            alt={fileName}
+            loading="lazy"
+            className="block h-48 w-full bg-canvas object-contain"
+          />
+        </button>
       ) : (
         <div className="flex h-48 items-center justify-center bg-canvas text-sm text-muted">
           Thumbnail unavailable

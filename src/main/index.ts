@@ -8,7 +8,11 @@ import type { PhotoScanResponse, PhotoThumbnailUrlMap } from '@shared/types/phot
 import { analyzePhotoSimilarity } from '@main/services/similarity/similarityAnalyzer'
 import type { SimilarityAnalysisResponse } from '@shared/types/similarity'
 import { registerPhotoProtocolHandler } from '@main/services/photoProtocol'
-import { registerAccessiblePhotos, getPhotoThumbnailUrl } from '@main/services/photoAccessRegistry'
+import {
+  registerAccessiblePhotos,
+  getPhotoThumbnailUrl,
+  getPhotoPreviewUrl
+} from '@main/services/photoAccessRegistry'
 
 // Registers the local image scheme before Electron becomes ready.
 protocol.registerSchemesAsPrivileged([
@@ -127,6 +131,10 @@ app.whenReady().then(() => {
     }
 
     return thumbnailUrls
+  })
+
+  ipcMain.handle('photos:get-preview-url', (_, photoPath: string): string | null => {
+    return getPhotoPreviewUrl(photoPath)
   })
 
   createWindow()

@@ -3,6 +3,8 @@ import { randomUUID } from 'crypto'
 const photoPathsById = new Map<string, string>()
 const photoIdsByPath = new Map<string, string>()
 
+type PhotoImageVariant = 'thumbnail' | 'preview'
+
 /**
  * Registers the photos accessible through the local image protocol.
  *
@@ -33,16 +35,30 @@ export function getAccessiblePhotoPath(photoId: string): string | null {
 }
 
 /**
- * Returns the local thumbnail URL for a registered photo.
+ * Builds an image URL for a registered local photo.
  *
  * Unregistered photo paths return null.
  */
-export function getPhotoThumbnailUrl(photoPath: string): string | null {
+function getPhotoImageUrl(photoPath: string, variant: PhotoImageVariant): string | null {
   const photoId = photoIdsByPath.get(photoPath)
 
   if (!photoId) {
     return null
   }
 
-  return `similens-photo://thumbnail/${photoId}`
+  return `similens-photo://${variant}/${photoId}`
+}
+
+/**
+ * Returns the thumbnail URL for a registered photo.
+ */
+export function getPhotoThumbnailUrl(photoPath: string): string | null {
+  return getPhotoImageUrl(photoPath, 'thumbnail')
+}
+
+/**
+ * Returns the higher-resolution preview URL for a registered photo.
+ */
+export function getPhotoPreviewUrl(photoPath: string): string | null {
+  return getPhotoImageUrl(photoPath, 'preview')
 }

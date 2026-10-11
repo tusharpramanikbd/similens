@@ -16,6 +16,9 @@ const similensAPI = {
   },
   getThumbnailUrls: (photoPaths: string[]): Promise<PhotoThumbnailUrlMap> => {
     return ipcRenderer.invoke('photos:get-thumbnail-urls', photoPaths)
+  },
+  getPreviewUrl: (photoPath: string): Promise<string | null> => {
+    return ipcRenderer.invoke('photos:get-preview-url', photoPath)
   }
 }
 

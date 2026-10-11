@@ -10,6 +10,7 @@ declare global {
       scanFolder: (folderPath: string) => Promise<PhotoScanResponse>
       analyzeSimilarPhotos: (photoPaths: string[]) => Promise<SimilarityAnalysisResponse>
       getThumbnailUrls: (photoPaths: string[]) => Promise<PhotoThumbnailUrlMap>
+      getPreviewUrl: (photoPath: string) => Promise<string | null>
     }
   }
 }

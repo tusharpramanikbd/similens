@@ -1,13 +1,18 @@
+import { useState } from 'react'
+
 import type { SimilarityGroup } from '@shared/types/similarity'
 import { usePhotoThumbnails } from '@renderer/hooks/usePhotoThumbnails'
 import { usePhotoSelection } from '@renderer/hooks/usePhotoSelection'
 import { PhotoCard } from './PhotoCard'
+import { PhotoPreview } from './PhotoPreview'
 
 interface SimilarityReviewProps {
   groups: SimilarityGroup[]
 }
 
 export function SimilarityReview({ groups }: SimilarityReviewProps): React.JSX.Element {
+  const [previewPhotoPath, setPreviewPhotoPath] = useState<string | null>(null)
+
   const { thumbnailUrls, isLoading, error } = usePhotoThumbnails(groups)
   const { selectedPhotos, togglePhotoSelection } = usePhotoSelection()
 
@@ -39,6 +44,7 @@ export function SimilarityReview({ groups }: SimilarityReviewProps): React.JSX.E
                     thumbnailUrl={thumbnailUrls[photoPath]}
                     isSelected={selectedPhotos.has(photoPath)}
                     onToggleSelection={togglePhotoSelection}
+                    onPreview={setPreviewPhotoPath}
                   />
                 ))}
               </div>
@@ -46,6 +52,8 @@ export function SimilarityReview({ groups }: SimilarityReviewProps): React.JSX.E
           ))}
         </div>
       )}
+
+      <PhotoPreview photoPath={previewPhotoPath} onClose={(): void => setPreviewPhotoPath(null)} />
     </section>
   )
 }

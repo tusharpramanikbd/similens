@@ -5,16 +5,22 @@ import { decodeImage } from '@main/services/imageDecoder'
 import { SUPPORTED_IMAGE_EXTENSIONS } from '@shared/constants/imageFormats'
 
 const THUMBNAIL_SIZE = 360
+const PREVIEW_SIZE = 1600
 
 /**
- * Generates a WebP thumbnail from a supported local photo.
+ * Generates a resized WebP image from a supported local photo.
  *
  * HEIC files are decoded through the shared image decoder.
  * Other supported formats are processed directly by Sharp.
  *
- * The image is resized without stretching or unnecessary enlargement.
+ * The original aspect ratio is preserved without cropping,
+ * stretching, or unnecessary enlargement.
  */
-export async function generatePhotoThumbnail(imagePath: string): Promise<Buffer> {
+async function generateResizedPhoto(
+  imagePath: string,
+  size: number,
+  quality: number
+): Promise<Buffer> {
   const extension = extname(imagePath).toLowerCase()
 
   if (!SUPPORTED_IMAGE_EXTENSIONS.has(extension)) {
@@ -39,11 +45,26 @@ export async function generatePhotoThumbnail(imagePath: string): Promise<Buffer>
 
   return image
     .resize({
-      width: THUMBNAIL_SIZE,
-      height: THUMBNAIL_SIZE,
+      width: size,
+      height: size,
       fit: 'inside',
       withoutEnlargement: true
     })
-    .webp({ quality: 80 })
+    .webp({ quality })
     .toBuffer()
+}
+
+/**
+ * Generates a WebP thumbnail within a 360px bounding box.
+ */
+export async function generatePhotoThumbnail(imagePath: string): Promise<Buffer> {
+  return generateResizedPhoto(imagePath, THUMBNAIL_SIZE, 80)
+}
+
+/**
+ * Generates a higher-resolution WebP image for photo previews
+ * within a 1600px bounding box.
+ */
+export async function generatePhotoPreview(imagePath: string): Promise<Buffer> {
+  return generateResizedPhoto(imagePath, PREVIEW_SIZE, 85)
 }
