@@ -7,7 +7,7 @@ function App(): React.JSX.Element {
 
   return (
     <main>
-      <h1>Similens</h1>
+      <h1 className="text-4xl font-bold text-brand">Similens</h1>
       <p>Local AI for smarter photo culling.</p>
 
       <PhotoScanner scanner={scanner} />

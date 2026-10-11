@@ -1,4 +1,26 @@
+@import 'tailwindcss';
 @import './base.css';
+
+@theme {
+  /* Brand colors */
+  --color-brand: #3b6ff5;
+  --color-brand-hover: #2858d9;
+
+  /* Background colors */
+  --color-canvas: #f7f9fc;
+  --color-surface: #ffffff;
+
+  /* Text colors */
+  --color-foreground: #1e293b;
+  --color-muted: #64748b;
+
+  /* Border colors */
+  --color-stroke: #e2e8f0;
+
+  /* Border radius */
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+}
 
 #root {
   min-height: 100vh;
