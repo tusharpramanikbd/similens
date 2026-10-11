@@ -1,21 +1,19 @@
 import { SimilarityAnalysis } from '@renderer/features/similarity-analysis/SimilarityAnalysis'
 import { PhotoScanner } from '@renderer/features/photo-scanner/PhotoScanner'
 import { usePhotoScanner } from '@renderer/hooks/usePhotoScanner'
+import { AppLayout } from '@renderer/components/layout/AppLayout'
 
 function App(): React.JSX.Element {
   const scanner = usePhotoScanner()
 
   return (
-    <main>
-      <h1 className="text-4xl font-bold text-brand">Similens</h1>
-      <p>Local AI for smarter photo culling.</p>
-
+    <AppLayout>
       <PhotoScanner scanner={scanner} />
 
       {scanner.scanResult && scanner.scanResult.photoCount >= 2 && (
         <SimilarityAnalysis photoPaths={scanner.scanResult.photos} />
       )}
-    </main>
+    </AppLayout>
   )
 }
 
