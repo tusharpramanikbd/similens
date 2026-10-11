@@ -4,7 +4,7 @@ import { groupSimilarPhotos } from '@main/services/similarity/similarityGrouping
 
 import type { PhotoSimilarity, SimilarityGroup } from '@shared/types/similarity'
 
-export const DEFAULT_SIMILARITY_THRESHOLD = 0.9
+export const DEFAULT_SIMILARITY_THRESHOLD = 0.8
 
 interface PhotoEmbedding {
   photoPath: string

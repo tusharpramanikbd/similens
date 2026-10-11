@@ -22,7 +22,7 @@ const DATASET_ROOT = join(
 )
 
 // Provisional cosine-similarity cutoff calibrated on the current evaluation dataset.
-const SIMILARITY_THRESHOLD = 0.9
+const SIMILARITY_THRESHOLD = 0.8
 
 /**
  * Describes the structure of the evaluation dataset metadata.
