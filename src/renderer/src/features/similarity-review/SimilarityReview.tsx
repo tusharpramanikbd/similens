@@ -1,5 +1,7 @@
 import type { SimilarityGroup } from '@shared/types/similarity'
 import { usePhotoThumbnails } from '@renderer/hooks/usePhotoThumbnails'
+import { usePhotoSelection } from '@renderer/hooks/usePhotoSelection'
+import { PhotoCard } from './PhotoCard'
 
 interface SimilarityReviewProps {
   groups: SimilarityGroup[]
@@ -7,11 +9,14 @@ interface SimilarityReviewProps {
 
 export function SimilarityReview({ groups }: SimilarityReviewProps): React.JSX.Element {
   const { thumbnailUrls, isLoading, error } = usePhotoThumbnails(groups)
+  const { selectedPhotos, togglePhotoSelection } = usePhotoSelection()
+
   return (
     <section>
       <header>
         <h2>Similar Photos</h2>
         <p>{groups.length} similar photo groups found</p>
+        <p className="mt-1 text-sm text-muted">{selectedPhotos.size} photos selected</p>
       </header>
 
       {isLoading && <p>Loading photo thumbnails...</p>}
@@ -27,37 +32,15 @@ export function SimilarityReview({ groups }: SimilarityReviewProps): React.JSX.E
               <p className="mb-4 text-sm text-muted">{group.photos.length} photos</p>
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {group.photos.map((photoPath) => {
-                  const thumbnailUrl = thumbnailUrls[photoPath]
-                  const fileName = photoPath.split(/[\\/]/).pop() || 'Photo'
-
-                  return (
-                    <figure
-                      key={photoPath}
-                      className="overflow-hidden rounded-control border border-stroke"
-                    >
-                      {thumbnailUrl ? (
-                        <img
-                          src={thumbnailUrl}
-                          alt={fileName}
-                          loading="lazy"
-                          className="h-48 w-full bg-canvas object-contain"
-                        />
-                      ) : (
-                        <div className="flex h-40 items-center justify-center bg-canvas text-sm text-muted">
-                          Thumbnail unavailable
-                        </div>
-                      )}
-
-                      <figcaption
-                        className="truncate px-3 py-2 text-xs text-muted"
-                        title={fileName}
-                      >
-                        {fileName}
-                      </figcaption>
-                    </figure>
-                  )
-                })}
+                {group.photos.map((photoPath) => (
+                  <PhotoCard
+                    key={photoPath}
+                    photoPath={photoPath}
+                    thumbnailUrl={thumbnailUrls[photoPath]}
+                    isSelected={selectedPhotos.has(photoPath)}
+                    onToggleSelection={togglePhotoSelection}
+                  />
+                ))}
               </div>
             </section>
           ))}
