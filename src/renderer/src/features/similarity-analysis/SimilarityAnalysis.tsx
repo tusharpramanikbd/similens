@@ -1,4 +1,5 @@
 import { useSimilarityAnalysis } from '@renderer/hooks/useSimilarityAnalysis'
+import { SimilarityReview } from '@renderer/features/similarity-review/SimilarityReview'
 
 interface SimilarityAnalysisProps {
   photoPaths: string[]
@@ -23,7 +24,7 @@ export function SimilarityAnalysis({ photoPaths }: SimilarityAnalysisProps): Rea
 
       {status === 'analyzing' && <p>Analyzing photos locally...</p>}
 
-      {status === 'success' && groups && <p>Similar photo groups found: {groups.length}</p>}
+      {status === 'success' && groups && <SimilarityReview groups={groups} />}
 
       {status === 'empty' && <p>No similar photo groups found.</p>}
 
