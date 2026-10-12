@@ -1,5 +1,6 @@
 import { readdir, stat } from 'fs/promises'
 import { extname, join } from 'path'
+
 import type { PhotoScanResult } from '@shared/types/photo'
 import { SUPPORTED_IMAGE_EXTENSIONS } from '@shared/constants/imageFormats'
 
