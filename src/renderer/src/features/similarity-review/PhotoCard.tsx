@@ -17,8 +17,8 @@ export function PhotoCard({
 
   return (
     <figure
-      className={`overflow-hidden rounded-control border ${
-        isSelected ? 'border-brand' : 'border-stroke'
+      className={`overflow-hidden rounded-control border bg-surface transition-colors ${
+        isSelected ? 'border-brand bg-brand/5 ring-2 ring-brand/20' : 'border-stroke'
       }`}
     >
       {thumbnailUrl ? (
@@ -26,7 +26,7 @@ export function PhotoCard({
           type="button"
           onClick={(): void => onPreview(photoPath)}
           aria-label={`Preview ${fileName}`}
-          className="block w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-brand"
+          className="block w-full cursor-zoom-in transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand"
         >
           <img
             src={thumbnailUrl}
@@ -41,7 +41,7 @@ export function PhotoCard({
         </div>
       )}
 
-      <figcaption className="px-3 py-2 text-xs text-muted">
+      <figcaption className="border-t border-stroke px-3 py-3 text-xs text-muted">
         <label className="flex cursor-pointer items-center gap-2">
           <input
             type="checkbox"
