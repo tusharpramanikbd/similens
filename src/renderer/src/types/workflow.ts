@@ -1,0 +1,11 @@
+export type AppScreen =
+  | 'initial'
+  | 'scanning'
+  | 'ready'
+  | 'analyzing'
+  | 'stopping'
+  | 'stopped'
+  | 'complete'
+  | 'review'
+  | 'empty'
+  | 'error'

@@ -7,7 +7,7 @@ interface PhotoScannerProps {
 }
 
 export function PhotoScanner({ scanner }: PhotoScannerProps): React.JSX.Element {
-  const { selectedFolder, scanStatus, scanResult, scanError, selectFolder, scanFolder } = scanner
+  const { selectedFolder, scanStatus, scanResult, scanError, selectAndScanFolder } = scanner
 
   return (
     <section className="mx-auto max-w-3xl space-y-6">
@@ -32,7 +32,12 @@ export function PhotoScanner({ scanner }: PhotoScannerProps): React.JSX.Element 
           Select a folder containing the photos you want to analyze.
         </p>
 
-        <Button label="Browse Folder" onClick={selectFolder} className="mt-6" />
+        <Button
+          label={scanStatus === 'scanning' ? 'Scanning...' : 'Browse Folder'}
+          onClick={selectAndScanFolder}
+          disabled={scanStatus === 'scanning'}
+          className="mt-6"
+        />
 
         <p className="mt-5 text-xs text-muted">Supported formats: JPG, JPEG, PNG, HEIC, WEBP</p>
       </Card>
@@ -46,14 +51,11 @@ export function PhotoScanner({ scanner }: PhotoScannerProps): React.JSX.Element 
         </p>
       </Card>
 
-      {/* Scan action */}
-      <div className="flex justify-end">
-        <Button
-          label={scanStatus === 'scanning' ? 'Scanning...' : 'Scan Photos'}
-          onClick={scanFolder}
-          disabled={!selectedFolder || scanStatus === 'scanning'}
-        />
-      </div>
+      {scanStatus === 'scanning' && (
+        <p role="status" className="text-sm text-muted">
+          Scanning selected folder...
+        </p>
+      )}
 
       {/* Scan results */}
       {scanResult && (

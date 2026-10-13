@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import type { ScanStatus } from '@renderer/types/scan'
 import type { PhotoScanResult } from '@shared/types/photo'
@@ -8,8 +8,7 @@ export interface UsePhotoScannerReturn {
   scanStatus: ScanStatus
   scanResult: PhotoScanResult | null
   scanError: string | null
-  selectFolder: () => Promise<void>
-  scanFolder: () => Promise<void>
+  selectAndScanFolder: () => Promise<void>
 }
 
 export function usePhotoScanner(): UsePhotoScannerReturn {
@@ -18,27 +17,24 @@ export function usePhotoScanner(): UsePhotoScannerReturn {
   const [scanResult, setScanResult] = useState<PhotoScanResult | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
 
-  const selectFolder = async (): Promise<void> => {
+  const isOperationRunning = useRef(false)
+
+  const selectFolder = async (): Promise<string | null> => {
     const folderPath = await window.similens.selectFolder()
 
     if (folderPath) {
       setSelectedFolder(folderPath)
-      setScanStatus('folder-selected')
-      setScanResult(null)
-      setScanError(null)
     }
+
+    return folderPath
   }
 
-  const scanFolder = async (): Promise<void> => {
-    if (!selectedFolder) {
-      return
-    }
-
+  const scanFolder = async (folderPath: string): Promise<void> => {
     setScanStatus('scanning')
-    setScanError(null)
     setScanResult(null)
+    setScanError(null)
 
-    const response = await window.similens.scanFolder(selectedFolder)
+    const response = await window.similens.scanFolder(folderPath)
 
     if (!response.success) {
       setScanStatus('error')
@@ -50,12 +46,37 @@ export function usePhotoScanner(): UsePhotoScannerReturn {
     setScanStatus('success')
   }
 
+  const selectAndScanFolder = async (): Promise<void> => {
+    if (isOperationRunning.current) {
+      return
+    }
+
+    isOperationRunning.current = true
+
+    try {
+      const folderPath = await selectFolder()
+
+      if (!folderPath) {
+        return
+      }
+
+      await scanFolder(folderPath)
+    } catch (error) {
+      console.error('Failed to select or scan folder:', error)
+
+      setScanResult(null)
+      setScanStatus('error')
+      setScanError('Unable to select or scan this folder.')
+    } finally {
+      isOperationRunning.current = false
+    }
+  }
+
   return {
     selectedFolder,
     scanStatus,
     scanResult,
     scanError,
-    selectFolder,
-    scanFolder
+    selectAndScanFolder
   }
 }

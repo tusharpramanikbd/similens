@@ -3,7 +3,7 @@
 **Document type:** Source of Truth  
 **Project:** Similens  
 **Milestone:** 3 — Similar Photo Review UI  
-**Status:** Not Started  
+**Status:** In Progress
 **Purpose:** Integrate the validated Milestone 2 similarity engine into the Electron application and provide a clear local review experience for candidate near-duplicate photo groups.
 
 ---
@@ -117,39 +117,152 @@ The current similarity configuration is a validated MVP proof of concept, not a 
 
 # 4. Milestone 3 Product Flow
 
-The intended user flow is:
+## 4.1 Locked Application UX Flow
+
+Similens uses a stage-based application workflow.
+
+Each stage presents a focused screen while the main application
+layout and sidebar remain consistent.
+
+### Stage 1 — Initial
+
+- Show the "Find Similar Photos" landing screen.
+- Provide a "Select Photo Folder" action.
+- Explain supported image formats and local photo processing.
+- Do not show a separate "Scan Photos" action.
+
+### Stage 2 — Folder Selection and Automatic Scanning
+
+- Selecting a folder automatically starts the folder scan.
+- Show a loading state while scanning.
+- On success, transition to the Ready to Analyze screen.
+- Display the selected folder name and path.
+- Display the actual number of discovered supported photos.
+- Display the image formats detected in the selected folder.
+- Explain that photo analysis runs locally.
+- Provide a "Change" action to select another folder.
+- Changing the folder automatically starts a new scan.
+- Provide a "Start Analysis" action when at least two supported
+  photos are available.
+
+### Stage 3 — Analyzing
+
+- Start similarity analysis only after an explicit user action.
+- Display a dedicated analysis screen.
+- Show genuine processing stages when backend progress events
+  are available.
+- Do not display invented percentages or completed stages.
+- Do not provide folder-changing controls during analysis.
+- Provide a "Stop Analysis" action backed by actual cancellation.
+- Show a stopping state until cancellation is acknowledged.
+- Once stopped, allow the user to return to Ready to Analyze.
+- Ignore cancelled or outdated analysis results.
+
+### Stage 4 — Analysis Complete
+
+On successful analysis, show a dedicated results overview.
+
+Display:
+
+- Total scanned photos.
+- Number of similarity groups.
+- Total photos belonging to similarity groups.
+- Number of ungrouped photos.
+- AI model used.
+- Similarity threshold used.
+- Actual measured processing time.
+
+Ungrouped photos must not be described as definitively unique.
+
+Provide a "View Similar Photos" action.
+
+### Stage 5 — Similar Photo Review
+
+- Display a navigable list of similarity groups.
+- Show photos belonging to the currently selected group.
+- Preserve the similarity engine's original group membership.
+- Allow individual photo selection and deselection.
+- Show clear selection indicators and counts.
+- Allow larger photo previews.
+- Preserve selection state when opening and closing previews.
+- Do not perform deletion or automatic keep/delete decisions.
+
+### Stage 6 — Empty, Error, and Recovery
+
+- Show a dedicated empty state when no similar groups are found.
+- Show a clear error state when scanning or analysis fails.
+- Provide appropriate retry or return actions.
+- Allow users to select another folder without restarting Similens.
+- Prevent stale results from previous operations appearing
+  in a new workflow.
+
+## 4.2 Workflow Transitions
 
 ```text
-Launch Similens
-      ↓
-Select a local photo folder
-      ↓
-Milestone 1 folder scan
-      ↓
-Supported photos discovered
-      ↓
-Run similarity analysis
-      ↓
-Show analysis progress
-      ↓
-Milestone 2 similarity engine
-      ↓
-Candidate SimilarityGroup[]
-      ↓
-No groups?
-  ├── Yes → empty-result state
-  └── No  → review screen
-                ↓
-          inspect groups
-                ↓
-          select photos
-                ↓
-          preview photos
-                ↓
-          visually judge grouping quality
+Initial
+   |
+   | Select Photo Folder
+   v
+Scanning
+   |
+   | Scan successful
+   v
+Ready to Analyze
+   |
+   | Start Analysis
+   v
+Analyzing
+   |
+   +-- Stop requested --> Stopping
+   |                         |
+   |                         v
+   |                      Stopped
+   |                         |
+   |                         v
+   |                  Ready to Analyze
+   |
+   | Analysis successful
+   v
+Analysis Complete
+   |
+   | View Similar Photos
+   v
+Similarity Review
+   |
+   | Open Photo
+   v
+Photo Preview
+   |
+   | Close
+   v
+Similarity Review
 ```
 
-No deletion occurs at the end of this flow.
+Scanning, analysis, and review must also support appropriate
+empty and error transitions.
+
+## 4.3 Implementation Rules
+
+- Use simple React state for screen navigation.
+- Do not introduce React Router unless a real requirement emerges.
+- Keep filesystem operations and AI processing in the main process.
+- Reuse existing scanner, similarity, thumbnail, and preview services.
+- Implement real progress reporting before displaying processing stages.
+- Implement actual cancellation before enabling Stop Analysis.
+- Do not allow new scans to overwrite active analysis results.
+- Do not delete or modify original photos.
+- Keep Milestone 3 focused on local similarity review.
+
+## 4.4 Implementation Status
+
+This workflow is the approved UX target.
+
+Existing scanning, similarity analysis, thumbnail rendering,
+selection, and preview functionality will be reused.
+
+Automatic scanning, screen transitions, progress reporting,
+cancellation, and the dedicated results overview still require
+implementation and validation.
 
 ---
 
