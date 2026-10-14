@@ -1,14 +1,19 @@
-import { useSimilarityAnalysis } from '@renderer/hooks/useSimilarityAnalysis'
 import { SimilarityReview } from '@renderer/features/similarity-review/SimilarityReview'
 import { Button } from '@renderer/components/ui/Button'
 import { Card } from '@renderer/components/ui/Card'
 
+import type { UseSimilarityAnalysisReturn } from '@renderer/hooks/useSimilarityAnalysis'
+
 interface SimilarityAnalysisProps {
   photoPaths: string[]
+  analysis: UseSimilarityAnalysisReturn
 }
 
-export function SimilarityAnalysis({ photoPaths }: SimilarityAnalysisProps): React.JSX.Element {
-  const { status, groups, error, analyze } = useSimilarityAnalysis()
+export function SimilarityAnalysis({
+  photoPaths,
+  analysis
+}: SimilarityAnalysisProps): React.JSX.Element {
+  const { status, groups, error, analyze } = analysis
 
   const handleAnalyzeClick = (): void => {
     void analyze(photoPaths)

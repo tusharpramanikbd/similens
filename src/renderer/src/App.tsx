@@ -2,16 +2,44 @@ import { SimilarityAnalysis } from '@renderer/features/similarity-analysis/Simil
 import { PhotoScanner } from '@renderer/features/photo-scanner/PhotoScanner'
 import { usePhotoScanner } from '@renderer/hooks/usePhotoScanner'
 import { AppLayout } from '@renderer/components/layout/AppLayout'
+import { useSimilarityAnalysis } from '@renderer/hooks/useSimilarityAnalysis'
+import { FolderSelectionScreen } from '@renderer/features/photo-scanner/FolderSelectionScreen'
+import { ReadyToAnalyzeScreen } from '@renderer/features/photo-scanner/ReadyToAnalyzeScreen'
 
 function App(): React.JSX.Element {
   const scanner = usePhotoScanner()
+  const analysis = useSimilarityAnalysis()
+
+  const handleSelectAndScanFolder = async (): Promise<void> => {
+    await scanner.selectAndScanFolder(analysis.reset)
+  }
 
   return (
     <AppLayout>
-      <PhotoScanner scanner={scanner} />
+      {scanner.scanStatus === 'scanning' ? (
+        <section className="mx-auto max-w-3xl space-y-4">
+          <h1 className="text-2xl font-bold text-foreground">Scanning Photos</h1>
 
-      {scanner.scanResult && scanner.scanResult.photoCount >= 2 && (
-        <SimilarityAnalysis photoPaths={scanner.scanResult.photos} />
+          <p role="status" className="text-sm text-muted">
+            Looking for supported photos in your selected folder...
+          </p>
+        </section>
+      ) : scanner.scanStatus === 'error' ? (
+        <PhotoScanner scanner={scanner} />
+      ) : scanner.scanResult ? (
+        analysis.status === 'idle' ? (
+          <ReadyToAnalyzeScreen
+            scanResult={scanner.scanResult}
+            onChangeFolder={handleSelectAndScanFolder}
+            onStartAnalysis={() => {
+              void analysis.analyze(scanner.scanResult!.photos)
+            }}
+          />
+        ) : (
+          <SimilarityAnalysis photoPaths={scanner.scanResult.photos} analysis={analysis} />
+        )
+      ) : (
+        <FolderSelectionScreen onSelectFolder={handleSelectAndScanFolder} />
       )}
     </AppLayout>
   )

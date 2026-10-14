@@ -3,11 +3,12 @@ import { useRef, useState } from 'react'
 import type { AnalysisStatus } from '@renderer/types/analysis'
 import type { SimilarityGroup } from '@shared/types/similarity'
 
-interface UseSimilarityAnalysisReturn {
+export interface UseSimilarityAnalysisReturn {
   status: AnalysisStatus
   groups: SimilarityGroup[] | null
   error: string | null
   analyze: (photoPaths: string[]) => Promise<void>
+  reset: () => void
 }
 
 export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
@@ -54,10 +55,21 @@ export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
     }
   }
 
+  const reset = (): void => {
+    if (isAnalyzingRef.current) {
+      return
+    }
+
+    setStatus('idle')
+    setGroups(null)
+    setError(null)
+  }
+
   return {
     status,
     groups,
     error,
-    analyze
+    analyze,
+    reset
   }
 }

@@ -8,7 +8,7 @@ export interface UsePhotoScannerReturn {
   scanStatus: ScanStatus
   scanResult: PhotoScanResult | null
   scanError: string | null
-  selectAndScanFolder: () => Promise<void>
+  selectAndScanFolder: (onFolderSelected?: () => void) => Promise<void>
 }
 
 export function usePhotoScanner(): UsePhotoScannerReturn {
@@ -46,7 +46,7 @@ export function usePhotoScanner(): UsePhotoScannerReturn {
     setScanStatus('success')
   }
 
-  const selectAndScanFolder = async (): Promise<void> => {
+  const selectAndScanFolder = async (onFolderSelected?: () => void): Promise<void> => {
     if (isOperationRunning.current) {
       return
     }
@@ -59,6 +59,8 @@ export function usePhotoScanner(): UsePhotoScannerReturn {
       if (!folderPath) {
         return
       }
+
+      onFolderSelected?.()
 
       await scanFolder(folderPath)
     } catch (error) {
