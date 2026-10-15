@@ -5,6 +5,7 @@ import { AppLayout } from '@renderer/components/layout/AppLayout'
 import { useSimilarityAnalysis } from '@renderer/hooks/useSimilarityAnalysis'
 import { FolderSelectionScreen } from '@renderer/features/photo-scanner/FolderSelectionScreen'
 import { ReadyToAnalyzeScreen } from '@renderer/features/photo-scanner/ReadyToAnalyzeScreen'
+import { AnalyzingScreen } from '@renderer/features/similarity-analysis/AnalyzingScreen'
 
 function App(): React.JSX.Element {
   const scanner = usePhotoScanner()
@@ -35,6 +36,8 @@ function App(): React.JSX.Element {
               void analysis.analyze(scanner.scanResult!.photos)
             }}
           />
+        ) : analysis.status === 'analyzing' ? (
+          <AnalyzingScreen photoCount={scanner.scanResult.photoCount} />
         ) : (
           <SimilarityAnalysis photoPaths={scanner.scanResult.photos} analysis={analysis} />
         )
