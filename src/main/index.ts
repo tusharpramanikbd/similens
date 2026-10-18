@@ -104,9 +104,15 @@ app.whenReady().then(() => {
 
   ipcMain.handle(
     'photos:analyze-similarity',
-    async (_, photoPaths: string[]): Promise<SimilarityAnalysisResponse> => {
+    async (event, photoPaths: string[]): Promise<SimilarityAnalysisResponse> => {
       try {
-        const groups = await analyzePhotoSimilarity(photoPaths)
+        const groups = await analyzePhotoSimilarity(photoPaths, {
+          onProgress: (stage): void => {
+            if (!event.sender.isDestroyed()) {
+              event.sender.send('photos:similarity-progress', { stage })
+            }
+          }
+        })
 
         return {
           success: true,

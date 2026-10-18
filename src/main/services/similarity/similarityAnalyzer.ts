@@ -2,13 +2,22 @@ import { calculateCosineSimilarity } from '@main/services/similarity/embeddingSi
 import { generateImageEmbedding } from '@main/services/similarity/imageEmbedding'
 import { groupSimilarPhotos } from '@main/services/similarity/similarityGrouping'
 
-import type { PhotoSimilarity, SimilarityGroup } from '@shared/types/similarity'
+import type {
+  PhotoSimilarity,
+  SimilarityGroup,
+  SimilarityAnalysisStage
+} from '@shared/types/similarity'
 
 export const DEFAULT_SIMILARITY_THRESHOLD = 0.8
 
 interface PhotoEmbedding {
   photoPath: string
   embedding: number[]
+}
+
+interface SimilarityAnalysisOptions {
+  threshold?: number
+  onProgress?: (stage: SimilarityAnalysisStage) => void
 }
 
 /**
@@ -19,11 +28,15 @@ interface PhotoEmbedding {
  */
 export async function analyzePhotoSimilarity(
   photoPaths: string[],
-  threshold = DEFAULT_SIMILARITY_THRESHOLD
+  options: SimilarityAnalysisOptions = {}
 ): Promise<SimilarityGroup[]> {
+  const { threshold = DEFAULT_SIMILARITY_THRESHOLD, onProgress } = options
+
   if (photoPaths.length < 2) {
     return []
   }
+
+  onProgress?.('generating-embeddings')
 
   const photoEmbeddings: PhotoEmbedding[] = []
 
@@ -35,6 +48,8 @@ export async function analyzePhotoSimilarity(
       embedding
     })
   }
+
+  onProgress?.('calculating-similarities')
 
   const similarities: PhotoSimilarity[] = []
 
@@ -51,6 +66,8 @@ export async function analyzePhotoSimilarity(
       })
     }
   }
+
+  onProgress?.('finding-similar-groups')
 
   return groupSimilarPhotos(photoPaths, similarities, threshold)
 }

@@ -1,10 +1,33 @@
 import { Card } from '@renderer/components/ui/Card'
 
+import type { SimilarityAnalysisStage } from '@shared/types/similarity'
+
 interface AnalyzingScreenProps {
   photoCount: number
+  stage: SimilarityAnalysisStage | null
 }
 
-export function AnalyzingScreen({ photoCount }: AnalyzingScreenProps): React.JSX.Element {
+const ANALYSIS_STAGES: {
+  id: SimilarityAnalysisStage
+  label: string
+}[] = [
+  {
+    id: 'generating-embeddings',
+    label: 'Generating image embeddings'
+  },
+  {
+    id: 'calculating-similarities',
+    label: 'Calculating similarities'
+  },
+  {
+    id: 'finding-similar-groups',
+    label: 'Finding similar groups'
+  }
+]
+
+export function AnalyzingScreen({ photoCount, stage }: AnalyzingScreenProps): React.JSX.Element {
+  const currentStageIndex = ANALYSIS_STAGES.findIndex((item) => item.id === stage)
+
   return (
     <section className="mx-auto max-w-3xl space-y-6">
       <header>
@@ -29,6 +52,32 @@ export function AnalyzingScreen({ photoCount }: AnalyzingScreenProps): React.JSX
           Processing your photos locally. This may take a while depending on the size of your
           collection.
         </p>
+
+        <ul aria-label="Analysis progress" className="mx-auto mt-8 max-w-md space-y-3 text-left">
+          {ANALYSIS_STAGES.map((item, index) => {
+            const isCompleted = index < currentStageIndex
+            const isActive = index === currentStageIndex
+
+            return (
+              <li
+                key={item.id}
+                className={`flex items-center gap-3 rounded-control p-3 ${
+                  isActive ? 'bg-brand/5 text-brand' : 'text-muted'
+                }`}
+              >
+                <span aria-hidden="true" className="w-5 text-center text-lg">
+                  {isCompleted ? '✓' : isActive ? '●' : '○'}
+                </span>
+
+                <span className="text-sm font-medium">{item.label}</span>
+
+                <span className="sr-only">
+                  {isCompleted ? 'Completed' : isActive ? 'In progress' : 'Pending'}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
       </Card>
     </section>
   )

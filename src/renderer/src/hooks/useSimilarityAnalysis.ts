@@ -1,12 +1,13 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { AnalysisStatus } from '@renderer/types/analysis'
-import type { SimilarityGroup } from '@shared/types/similarity'
+import type { SimilarityAnalysisStage, SimilarityGroup } from '@shared/types/similarity'
 
 export interface UseSimilarityAnalysisReturn {
   status: AnalysisStatus
   groups: SimilarityGroup[] | null
   error: string | null
+  stage: SimilarityAnalysisStage | null
   analyze: (photoPaths: string[]) => Promise<void>
   reset: () => void
 }
@@ -15,8 +16,21 @@ export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
   const [status, setStatus] = useState<AnalysisStatus>('idle')
   const [groups, setGroups] = useState<SimilarityGroup[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [stage, setStage] = useState<SimilarityAnalysisStage | null>(null)
 
   const isAnalyzingRef = useRef(false)
+
+  useEffect(() => {
+    const unsubscribe = window.similens.onSimilarityProgress(
+      (nextStage: SimilarityAnalysisStage): void => {
+        if (isAnalyzingRef.current) {
+          setStage(nextStage)
+        }
+      }
+    )
+
+    return unsubscribe
+  }, [])
 
   const analyze = async (photoPaths: string[]): Promise<void> => {
     if (isAnalyzingRef.current || photoPaths.length < 2) {
@@ -28,6 +42,7 @@ export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
     setStatus('analyzing')
     setGroups(null)
     setError(null)
+    setStage(null)
 
     try {
       const response = await window.similens.analyzeSimilarPhotos(photoPaths)
@@ -52,6 +67,7 @@ export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
       setStatus('error')
     } finally {
       isAnalyzingRef.current = false
+      setStage(null)
     }
   }
 
@@ -63,10 +79,12 @@ export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
     setStatus('idle')
     setGroups(null)
     setError(null)
+    setStage(null)
   }
 
   return {
     status,
+    stage,
     groups,
     error,
     analyze,

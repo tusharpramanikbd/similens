@@ -37,7 +37,7 @@ function App(): React.JSX.Element {
             }}
           />
         ) : analysis.status === 'analyzing' ? (
-          <AnalyzingScreen photoCount={scanner.scanResult.photoCount} />
+          <AnalyzingScreen photoCount={scanner.scanResult.photoCount} stage={analysis.stage} />
         ) : (
           <SimilarityAnalysis photoPaths={scanner.scanResult.photos} analysis={analysis} />
         )

@@ -19,3 +19,6 @@ export type SimilarityAnalysisResponse =
       success: false
       error: string
     }
+
+export type SimilarityAnalysisStage =
+  'generating-embeddings' | 'calculating-similarities' | 'finding-similar-groups'

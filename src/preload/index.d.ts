@@ -1,5 +1,5 @@
 import type { PhotoScanResponse, PhotoThumbnailUrlMap } from '@shared/types/photo'
-import type { SimilarityAnalysisResponse } from '@shared/types/similarity'
+import type { SimilarityAnalysisResponse, SimilarityAnalysisStage } from '@shared/types/similarity'
 
 export {}
 
@@ -9,6 +9,7 @@ declare global {
       selectFolder: () => Promise<string | null>
       scanFolder: (folderPath: string) => Promise<PhotoScanResponse>
       analyzeSimilarPhotos: (photoPaths: string[]) => Promise<SimilarityAnalysisResponse>
+      onSimilarityProgress: (callback: (stage: SimilarityAnalysisStage) => void) => () => void
       getThumbnailUrls: (photoPaths: string[]) => Promise<PhotoThumbnailUrlMap>
       getPreviewUrl: (photoPath: string) => Promise<string | null>
     }
