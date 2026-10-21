@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { useAnalysisStageQueue } from '@renderer/hooks/useAnalysisStageQueue'
+
 import type { AnalysisStatus } from '@renderer/types/analysis'
 import type { SimilarityAnalysisStage, SimilarityGroup } from '@shared/types/similarity'
 
@@ -16,21 +18,14 @@ export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
   const [status, setStatus] = useState<AnalysisStatus>('idle')
   const [groups, setGroups] = useState<SimilarityGroup[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [stage, setStage] = useState<SimilarityAnalysisStage | null>(null)
 
   const isAnalyzingRef = useRef(false)
 
-  useEffect(() => {
-    const unsubscribe = window.similens.onSimilarityProgress(
-      (nextStage: SimilarityAnalysisStage): void => {
-        if (isAnalyzingRef.current) {
-          setStage(nextStage)
-        }
-      }
-    )
+  const { stage, configureQueue, enqueueStage, waitForCompletion } = useAnalysisStageQueue()
 
-    return unsubscribe
-  }, [])
+  useEffect(() => {
+    return window.similens.onSimilarityProgress(enqueueStage)
+  }, [enqueueStage])
 
   const analyze = async (photoPaths: string[]): Promise<void> => {
     if (isAnalyzingRef.current || photoPaths.length < 2) {
@@ -38,11 +33,11 @@ export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
     }
 
     isAnalyzingRef.current = true
+    configureQueue('start')
 
     setStatus('analyzing')
     setGroups(null)
     setError(null)
-    setStage(null)
 
     try {
       const response = await window.similens.analyzeSimilarPhotos(photoPaths)
@@ -52,6 +47,9 @@ export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
         setStatus('error')
         return
       }
+
+      enqueueStage('finding-similar-groups')
+      await waitForCompletion()
 
       setGroups(response.groups)
 
@@ -67,7 +65,7 @@ export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
       setStatus('error')
     } finally {
       isAnalyzingRef.current = false
-      setStage(null)
+      configureQueue('stop')
     }
   }
 
@@ -76,10 +74,11 @@ export function useSimilarityAnalysis(): UseSimilarityAnalysisReturn {
       return
     }
 
+    configureQueue('stop')
+
     setStatus('idle')
     setGroups(null)
     setError(null)
-    setStage(null)
   }
 
   return {
