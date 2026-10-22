@@ -18,6 +18,7 @@ export type SimilarityAnalysisResponse =
   | {
       success: false
       error: string
+      cancelled?: boolean
     }
 
 export type SimilarityAnalysisStage =

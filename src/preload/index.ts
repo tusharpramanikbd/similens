@@ -14,6 +14,7 @@ const similensAPI = {
   analyzeSimilarPhotos: (photoPaths: string[]): Promise<SimilarityAnalysisResponse> => {
     return ipcRenderer.invoke('photos:analyze-similarity', photoPaths)
   },
+  cancelSimilarityAnalysis: (): Promise<boolean> => ipcRenderer.invoke('photos:cancel-similarity'),
   onSimilarityProgress: (callback: (stage: SimilarityAnalysisStage) => void): (() => void) => {
     const listener = (
       _event: IpcRendererEvent,

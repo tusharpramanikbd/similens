@@ -18,6 +18,7 @@ interface PhotoEmbedding {
 interface SimilarityAnalysisOptions {
   threshold?: number
   onProgress?: (stage: SimilarityAnalysisStage) => void
+  signal?: AbortSignal
 }
 
 /**
@@ -30,7 +31,7 @@ export async function analyzePhotoSimilarity(
   photoPaths: string[],
   options: SimilarityAnalysisOptions = {}
 ): Promise<SimilarityGroup[]> {
-  const { threshold = DEFAULT_SIMILARITY_THRESHOLD, onProgress } = options
+  const { threshold = DEFAULT_SIMILARITY_THRESHOLD, onProgress, signal } = options
 
   if (photoPaths.length < 2) {
     return []
@@ -41,7 +42,11 @@ export async function analyzePhotoSimilarity(
   const photoEmbeddings: PhotoEmbedding[] = []
 
   for (const photoPath of photoPaths) {
+    signal?.throwIfAborted()
+
     const embedding = await generateImageEmbedding(photoPath)
+
+    signal?.throwIfAborted()
 
     photoEmbeddings.push({
       photoPath,
@@ -54,6 +59,8 @@ export async function analyzePhotoSimilarity(
   const similarities: PhotoSimilarity[] = []
 
   for (let i = 0; i < photoEmbeddings.length; i++) {
+    signal?.throwIfAborted()
+
     const photoA = photoEmbeddings[i]
 
     for (let j = i + 1; j < photoEmbeddings.length; j++) {
@@ -67,7 +74,13 @@ export async function analyzePhotoSimilarity(
     }
   }
 
+  signal?.throwIfAborted()
+
   onProgress?.('finding-similar-groups')
 
-  return groupSimilarPhotos(photoPaths, similarities, threshold)
+  const groups = groupSimilarPhotos(photoPaths, similarities, threshold)
+
+  signal?.throwIfAborted()
+
+  return groups
 }

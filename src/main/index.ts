@@ -4,15 +4,18 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
 import { scanPhotoFolder } from '@main/services/photoScanner'
-import type { PhotoScanResponse, PhotoThumbnailUrlMap } from '@shared/types/photo'
 import { analyzePhotoSimilarity } from '@main/services/similarity/similarityAnalyzer'
-import type { SimilarityAnalysisResponse } from '@shared/types/similarity'
 import { registerPhotoProtocolHandler } from '@main/services/photoProtocol'
 import {
   registerAccessiblePhotos,
   getPhotoThumbnailUrl,
   getPhotoPreviewUrl
 } from '@main/services/photoAccessRegistry'
+
+import type { PhotoScanResponse, PhotoThumbnailUrlMap } from '@shared/types/photo'
+import type { SimilarityAnalysisResponse } from '@shared/types/similarity'
+
+let activeAnalysisController: AbortController | null = null
 
 // Registers the local image scheme before Electron becomes ready.
 protocol.registerSchemesAsPrivileged([
@@ -105,29 +108,63 @@ app.whenReady().then(() => {
   ipcMain.handle(
     'photos:analyze-similarity',
     async (event, photoPaths: string[]): Promise<SimilarityAnalysisResponse> => {
+      if (activeAnalysisController) {
+        return {
+          success: false,
+          error: 'An analysis is already running.'
+        }
+      }
+
+      const controller = new AbortController()
+      activeAnalysisController = controller
+
       try {
         const groups = await analyzePhotoSimilarity(photoPaths, {
+          signal: controller.signal,
+
           onProgress: (stage): void => {
-            if (!event.sender.isDestroyed()) {
-              event.sender.send('photos:similarity-progress', { stage })
+            if (!controller.signal.aborted && !event.sender.isDestroyed()) {
+              event.sender.send('photos:similarity-progress', stage)
             }
           }
         })
+
+        controller.signal.throwIfAborted()
 
         return {
           success: true,
           groups
         }
       } catch (error) {
+        if (controller.signal.aborted) {
+          return {
+            success: false,
+            error: 'Analysis cancelled.',
+            cancelled: true
+          }
+        }
+
         console.error('Failed to analyze photo similarity:', error)
 
         return {
           success: false,
           error: 'Unable to analyze photo similarity.'
         }
+      } finally {
+        activeAnalysisController = null
       }
     }
   )
+
+  ipcMain.handle('photos:cancel-similarity', (): boolean => {
+    if (!activeAnalysisController) {
+      return false
+    }
+
+    activeAnalysisController.abort()
+
+    return true
+  })
 
   ipcMain.handle('photos:get-thumbnail-urls', (_, photoPaths: string[]): PhotoThumbnailUrlMap => {
     const thumbnailUrls: PhotoThumbnailUrlMap = {}

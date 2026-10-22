@@ -9,6 +9,7 @@ declare global {
       selectFolder: () => Promise<string | null>
       scanFolder: (folderPath: string) => Promise<PhotoScanResponse>
       analyzeSimilarPhotos: (photoPaths: string[]) => Promise<SimilarityAnalysisResponse>
+      cancelSimilarityAnalysis: () => Promise<boolean>
       onSimilarityProgress: (callback: (stage: SimilarityAnalysisStage) => void) => () => void
       getThumbnailUrls: (photoPaths: string[]) => Promise<PhotoThumbnailUrlMap>
       getPreviewUrl: (photoPath: string) => Promise<string | null>
